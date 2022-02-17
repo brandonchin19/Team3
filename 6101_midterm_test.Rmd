@@ -27,21 +27,47 @@ options(scientific=T, digits = 3)
 # use scipen=999 to prevent scientific notation at all times
 ```
 
-
 ### Load in dataset
 
 ```{r}
-hmda <- read.table(file = "2019_lar.txt",
-                 header = TRUE,
-                 sep = "|",
-                 na.strings = "",
-                 comment.char = "",
-                 quote = "\"",
-                 fill = FALSE,
-                 nrows = 10000)
-str(hmda)
+hmda <- data.frame(read.csv("2019_lar.csv"))
+hmda
+```
+
+# Check number of rows
+
+```{r}
+nrow(hmda)
+```
+
+
+# Check head and tail of dataframe
+
+```{r}
+xkabledplyhead(hmda,5)
+xkabledplytail(hmda,5)
+```
+
+# Some summaries
+
+```{r}
+xkablesummary(hmda[22], title = "Loan amount summary of selected statistics" )
+```
+
+# Boxplots
+
+```{r}
+ggplot(hmda,aes(x=applicant_sex))+
+  geom_boxplot(color="black", fill="purple")+
+  labs(title="Boxplot of Applicant Sex", x="Applicant Sex", y="Frequency")
+```
+
+The results of this look pretty weird. What are values 3, 4, and 6? 3 = not provided, 4 = not applicable, 6 = applicant selected both male (1) and female (2). We should remove 3, 4, and 6 or create a subset of only 1 and 2.
+
+```{r}
+hmda_m_f <- subset(hmda,applicant_sex<3)
 ```
 
 ```{r}
-write.csv(hmda,"2019_lar.csv",row.names = FALSE, quote=FALSE)
+summary(hmda_m_f)
 ```
