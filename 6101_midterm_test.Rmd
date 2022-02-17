@@ -30,8 +30,6 @@ options(scientific=T, digits = 3)
 
 ### Load in dataset
 
-**Same as last homework, import the dataset as Adata, and make sure the data type for the variables are set properly for categorical variables.**
-
 ```{r}
 hmda <- read.table(file = "2019_lar.txt",
                  header = TRUE,
