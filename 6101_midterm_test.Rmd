@@ -1,6 +1,6 @@
 ---
 title: "DATS 6101 Midterm"
-author: "Paul Kelly"
+authors: "Brandon Chin, Paul Kelly, Ksenia Shadrina, Luke Wu"
 date: "2/16/22"
 # date: "`r Sys.Date()`"
 output:
