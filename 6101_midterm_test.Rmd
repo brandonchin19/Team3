@@ -31,6 +31,10 @@ options(scientific=T, digits = 3)
 
 1. Are approved mortgage applications from white women under 35 awarded interest rates of one percentage point or higher than those from white men under 35 for properties worth over $400,000?
 
+### Potential issues with the data:
+
+The smaller sample we selected (the first 10,000 records) is heavily weighted to the state of California. This could skew data unreasonably if we choose a research question that touches upon "state." Should we figure out how to "randomize" selection of dataset rows, or just make a note of it in our EDA?
+
 ### Load in dataset
 
 ```{r}
