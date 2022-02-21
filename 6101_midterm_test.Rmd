@@ -29,7 +29,7 @@ options(scientific=T, digits = 3)
 
 ### Potential SMART questions:
 
-1. Are approved mortgage applications from white women under 35 awarded interest rates of one percentage point or higher than those from white men under 35 for properties worth over $400,000?
+1. Were approved mortgage applications from white women under 35 awarded interest rates of one percentage point or higher than those from white men under 35 for properties worth over $400,000 in the United States in 2019?
 
 ### Potential issues with the data:
 
