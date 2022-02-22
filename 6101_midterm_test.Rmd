@@ -1,0 +1,94 @@
+---
+title: "DATS 6101 Midterm"
+authors: "Brandon Chin, Paul Kelly, Ksenia Shadrina, Luke Wu"
+date: "2/16/22"
+# date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+library(ezids)
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "show", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+### Potential SMART questions:
+
+1. Were approved mortgage applications from white women under 35 awarded interest rates of one percentage point or higher than those from white men under 35 for properties worth over $400,000 in the United States in 2019?
+
+### Potential issues with the data:
+
+The smaller sample we selected (the first 10,000 records) is heavily weighted to the state of California. This could skew data unreasonably if we choose a research question that touches upon "state." Should we figure out how to "randomize" selection of dataset rows, or just make a note of it in our EDA?
+
+### Load in dataset
+
+```{r}
+hmda <- data.frame(read.csv("2019_lar.csv"))
+hmda
+```
+
+# Check number of rows
+
+```{r}
+nrow(hmda)
+```
+
+
+# Check head and tail of dataframe
+
+```{r}
+xkabledplyhead(hmda,5)
+xkabledplytail(hmda,5)
+```
+
+# Some summaries
+
+```{r}
+xkablesummary(hmda[22], title = "Loan amount summary of selected statistics" )
+```
+
+# Boxplots
+
+```{r}
+ggplot(hmda,aes(x=applicant_sex))+
+  geom_boxplot(color="black", fill="purple")+
+  labs(title="Boxplot of Applicant Sex", x="Applicant Sex", y="Frequency")
+```
+
+The results of this look pretty weird. What are values 3, 4, and 6? 3 = not provided, 4 = not applicable, 6 = applicant selected both male (1) and female (2). We should remove 3, 4, and 6 or create a subset of only 1 and 2, then turn 1 and 2 into factors?
+
+# Subsetting
+
+```{r}
+hmda_m_f <- subset(hmda,applicant_sex<3)
+```
+
+# Change applicant_sex vector to factor
+
+```{r}
+hmda_m_f[, 'applicant_sex'] <- as.factor(hmda_m_f[, 'applicant_sex'])
+summary(hmda_m_f)
+```
+
+# Re-do the applicant_sex boxplot
+
+```{r}
+ggplot(hmda_m_f,aes(x=applicant_sex))+
+  geom_boxplot(color="black", fill="purple")+
+  labs(title="Boxplot of Applicant Sex", x="Applicant Sex", y="Frequency")
+```
