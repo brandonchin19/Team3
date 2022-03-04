@@ -149,7 +149,7 @@ qplot(data = hmda_ca_final_1,
       main="Loan amount vs. Race by Action taken")
 ```
 
-Loan amounts and loan originations are higher for white borrowers; loan amounts for other races are lower, and loan rejection rates are higher particularly for Black or African American Borrowers. 
+Loan amounts and loan originations are higher for white borrowers; loan amounts for other races are lower, and loan rejection rates are higher particularly for Black or African American Borrowers. The lower the loan amount, the higher the likelihood of the loan being rejected?
 
 # Exploring columns that appear to have lots of NAs
 
