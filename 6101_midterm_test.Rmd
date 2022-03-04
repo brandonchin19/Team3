@@ -90,8 +90,22 @@ str(hmda_ca_final)
 # Changing vector types
 
 ```{r}
-hmda_ca_cleaned_1[, 'applicant_sex'] <- as.factor(hmda_ca_cleaned_1[, 'applicant_sex'])
+hmda_ca_final[, 'applicant_sex'] <- as.factor(hmda_ca_cleaned_1[, 'applicant_sex'])
 str(hmda_ca_cleaned_1)
+```
+
+```{r}
+hmda_ca_final_1 = hmda_ca_final
+hmda_ca_final_1$derived_ethicity = factor(hmda_ca_final$derived_ethicity)
+hmda_ca_final_1$derived_race = factor(hmda_ca_final$derived_race)
+hmda_ca_final_1$derived_sex = factor(hmda_ca_final$derived_sex)
+hmda_ca_final_1$action_taken = factor(hmda_ca_final$action_taken)
+hmda_ca_final_1$loan_amount = as.numeric(hmda_ca_final$loan_amount)
+hmda_ca_final_1$interest_rate = as.numeric(hmda_ca_final$interest_rate)
+hmda_ca_final_1$property_value = as.numeric(hmda_ca_final$property_value)
+hmda_ca_final_1$income = as.numeric(hmda_ca_final$income)
+hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
+str(hmda_ca_final_1)
 ```
 
 # Exploring columns that appear to have lots of NAs
@@ -101,20 +115,8 @@ summary(hmda_ca_final$interest_rate)
 ```
 
 ```{r}
-summary(hmda_ca_cleaned$applicant_ethnicity_3)
+hmda_ca_final_no_outliers <- outlierKD2(hmda_ca_final,interest_rate)
 ```
-
-Recommend dropping all demographic columns after "1" because those fields are barely used.
-
-```{r}
-summary(hmda_ca_cleaned$denial_reason_2)
-```
-
-Recommend dropping all denial reason columns after "1" because those fields are barely used.
-
-Recommend removing all "aus" columns because they're irrelevant
-
-Should we remove all co-applicant data?
 
 # Boxplots
 
