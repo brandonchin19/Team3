@@ -87,56 +87,84 @@ hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,78)]
 str(hmda_ca_final)
 ```
 
+
 # Changing vector types
 
 ```{r}
-hmda_ca_cleaned_1[, 'applicant_sex'] <- as.factor(hmda_ca_cleaned_1[, 'applicant_sex'])
-str(hmda_ca_cleaned_1)
+hmda_ca_final_1 = hmda_ca_final
+hmda_ca_final_1$derived_ethnicity = factor(hmda_ca_final$derived_ethnicity)
+hmda_ca_final_1$derived_race = factor(hmda_ca_final$derived_race)
+hmda_ca_final_1$derived_sex = factor(hmda_ca_final$derived_sex)
+hmda_ca_final_1$action_taken = factor(hmda_ca_final$action_taken)
+hmda_ca_final_1$loan_amount = as.numeric(hmda_ca_final$loan_amount)
+hmda_ca_final_1$interest_rate = as.numeric(hmda_ca_final$interest_rate)
+hmda_ca_final_1$property_value = as.numeric(hmda_ca_final$property_value)
+hmda_ca_final_1$income = as.numeric(hmda_ca_final$income)
+hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
+str(hmda_ca_final_1)
 ```
+
+# Histograms
+
+```{r}
+library(ggplot2)
+ggplot(hmda_ca_final_1,aes(x=loan_amount))+
+  geom_histogram(color="black", fill="purple")+
+  labs(title="Histogram of Loan Amount", x="Loan Amount in dollars", y="Frequency")
+```
+
+Loan amount distribution does not appear to be normal (mean is greater than the median).
+
+```{r}
+library(ggplot2)
+ggplot(hmda_ca_final_1,aes(x=interest_rate))+
+  geom_histogram(color="black", fill="pink")+
+  labs(title="Histogram of Interest Rates", x="Interest Rates", y="Frequency")
+```
+
+Interest rate distribution does not appear to be normal (mean is greater than the median).
+
+```{r}
+ggplot(hmda_ca_final_1,aes(x=derived_sex))+
+  geom_boxplot(color="black", fill="purple")+
+  labs(title="Boxplot of Derived Sex", x="Derived Sex", y="Frequency")
+```
+
+Men appear more frequently in the data than women.
+
+```{r}
+ggplot(hmda_ca_final_1,aes(x=derived_race))+
+  geom_boxplot(color="black", fill="purple")+
+  labs(title="Boxplot of Derived Race", x="Derived Race", y="Frequency")
+```
+
+White applicants show up more than other races.
 
 # Exploring columns that appear to have lots of NAs
 
 ```{r}
-summary(hmda_ca_final$interest_rate)
+summary(hmda_ca_final_1$interest_rate)
+```
+
+
+```{r}
+summary(hmda_ca_final_1$property_value)
+```
+
+# Removing outliers from interest_rate and property_value
+
+Can we approach more normalized distributions in loan amount and interest rates by removing outliers (1493 for interest rate, and 977 for property value)?
+
+```{r}
+hmda_ca_final_no_outliers_1 <- outlierKD2(hmda_ca_final_1,interest_rate)
+```
+
+
+```{r}
+hmda_ca_final_no_outliers_2 <- outlierKD2(hmda_ca_final_no_outliers_1,property_value)
 ```
 
 ```{r}
-summary(hmda_ca_cleaned$applicant_ethnicity_3)
+loans <- outlierKD2(hmda_ca_final_no_outliers_2,income)
 ```
 
-Recommend dropping all demographic columns after "1" because those fields are barely used.
-
-```{r}
-summary(hmda_ca_cleaned$denial_reason_2)
-```
-
-Recommend dropping all denial reason columns after "1" because those fields are barely used.
-
-Recommend removing all "aus" columns because they're irrelevant
-
-Should we remove all co-applicant data?
-
-# Boxplots
-
-```{r}
-ggplot(hmda_ca_cleaned,aes(x=applicant_sex))+
-  geom_boxplot(color="black", fill="purple")+
-  labs(title="Boxplot of Applicant Sex", x="Applicant Sex", y="Frequency")
-```
-
-The results of this look pretty weird. What are values 3, 4, and 6? 3 = not provided, 4 = not applicable, 6 = applicant selected both male (1) and female (2). We should remove 3, 4, and 6 or create a subset of only 1 and 2, then turn 1 and 2 into factors?
-
-# Removing sex values above "2"
-
-Change this to derived_sex 
-
-```{r}
-hmda_ca_cleaned_1 <- subset(hmda_ca_cleaned,applicant_sex<3)
-```
-
-# Change applicant_sex vector to factor (expand this to other field that should be factorized)
-
-```{r}
-hmda_ca_cleaned_1[, 'applicant_sex'] <- as.factor(hmda_ca_cleaned_1[, 'applicant_sex'])
-str(hmda_ca_cleaned_1)
-```
