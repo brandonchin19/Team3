@@ -27,19 +27,23 @@ options(scientific=T, digits = 3)
 # use scipen=999 to prevent scientific notation at all times
 ```
 
-### Potential SMART questions:
+### Research Topic:
 
-1. Were approved mortgage applications from white women under 35 awarded interest rates of one percentage point or higher than those from white men under 35 for properties worth over $400,000 in the United States in 2019?
+There is considerable evidence indicating lending disparities throughout the United States. (Steil et. al: 2018). For our research topic, we will explore lending practices in one of the fastest appreciating real estate markets over the past thirty years - the state of California. Specifically, we aim to look at the factors that are associated with denials for non-commercial mortgage loans.
 
-### Potential issues with the data:
+Our SMART question is:
 
-The smaller sample we selected (the first 10,000 records) is heavily weighted to the state of California. This could skew data unreasonably if we choose a research question that touches upon "state." Should we figure out how to "randomize" selection of dataset rows, or just make a note of it in our EDA?
+“Which factors drove denials for mortgages in California in 2019?”
+
+To answer this question, we are using the Federal Financial Institutions Examination Council's (FFIEC) Home Mortgage Disclosure Act (HMDA) dataset from 2019, located here: https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level-dataset/2019. We are  focusing on a subset of data of 10,000 observations from 2019 that we will further filter on California leaving us with 5,196 observations.
+
+Our Github repository address is:https://github.com/brandonchin19/Team3/.
 
 ### Load in dataset
 
 ```{r}
 hmda <- data.frame(read.csv("2019_lar.csv"))
-hmda
+str(hmda)
 ```
 
 # Check number of rows
@@ -56,39 +60,83 @@ xkabledplyhead(hmda,5)
 xkabledplytail(hmda,5)
 ```
 
-# Some summaries
+# Subsetting to California Only
 
 ```{r}
-xkablesummary(hmda[22], title = "Loan amount summary of selected statistics" )
+hmda_ca <- subset(hmda,state_code=="CA")
+str(hmda_ca)
 ```
+
+# Subsetting to California Only; non-business properties; principal residences only
+
+```{r}
+hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
+str(hmda_ca)
+```
+
+
+```{r}
+hmda_ca <- subset(hmda_ca,occupancy_type=="1")
+str(hmda_ca)
+```
+
+# Subsetting to only relevant columns
+
+```{r}
+hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,78)]
+str(hmda_ca_final)
+```
+
+# Changing vector types
+
+```{r}
+hmda_ca_cleaned_1[, 'applicant_sex'] <- as.factor(hmda_ca_cleaned_1[, 'applicant_sex'])
+str(hmda_ca_cleaned_1)
+```
+
+# Exploring columns that appear to have lots of NAs
+
+```{r}
+summary(hmda_ca_final$interest_rate)
+```
+
+```{r}
+summary(hmda_ca_cleaned$applicant_ethnicity_3)
+```
+
+Recommend dropping all demographic columns after "1" because those fields are barely used.
+
+```{r}
+summary(hmda_ca_cleaned$denial_reason_2)
+```
+
+Recommend dropping all denial reason columns after "1" because those fields are barely used.
+
+Recommend removing all "aus" columns because they're irrelevant
+
+Should we remove all co-applicant data?
 
 # Boxplots
 
 ```{r}
-ggplot(hmda,aes(x=applicant_sex))+
+ggplot(hmda_ca_cleaned,aes(x=applicant_sex))+
   geom_boxplot(color="black", fill="purple")+
   labs(title="Boxplot of Applicant Sex", x="Applicant Sex", y="Frequency")
 ```
 
 The results of this look pretty weird. What are values 3, 4, and 6? 3 = not provided, 4 = not applicable, 6 = applicant selected both male (1) and female (2). We should remove 3, 4, and 6 or create a subset of only 1 and 2, then turn 1 and 2 into factors?
 
-# Subsetting
+# Removing sex values above "2"
+
+Change this to derived_sex 
 
 ```{r}
-hmda_m_f <- subset(hmda,applicant_sex<3)
+hmda_ca_cleaned_1 <- subset(hmda_ca_cleaned,applicant_sex<3)
 ```
 
-# Change applicant_sex vector to factor
+# Change applicant_sex vector to factor (expand this to other field that should be factorized)
 
 ```{r}
-hmda_m_f[, 'applicant_sex'] <- as.factor(hmda_m_f[, 'applicant_sex'])
-summary(hmda_m_f)
-```
-
-# Re-do the applicant_sex boxplot
-
-```{r}
-ggplot(hmda_m_f,aes(x=applicant_sex))+
-  geom_boxplot(color="black", fill="purple")+
-  labs(title="Boxplot of Applicant Sex", x="Applicant Sex", y="Frequency")
+hmda_ca_cleaned_1[, 'applicant_sex'] <- as.factor(hmda_ca_cleaned_1[, 'applicant_sex'])
+str(hmda_ca_cleaned_1)
 ```
