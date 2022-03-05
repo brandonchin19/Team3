@@ -256,4 +256,5 @@ qqnorm(loans$loan_amount,
        col="blue")
 qqline(loans$loan_amount)
 ```
-I ran all of this to try to remove outliers but OutlierKD2 opted not to change anything because there were so few, meaning the qqplots did not change.
+
+We ran all of this to try to remove outliers but OutlierKD2 opted not to change anything because there were so few, meaning the qqplots did not change.
