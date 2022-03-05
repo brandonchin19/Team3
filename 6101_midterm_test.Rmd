@@ -104,7 +104,7 @@ hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
 str(hmda_ca_final_1)
 ```
 
-# Histograms
+# Histograms and Box Plots
 
 ```{r}
 library(ggplot2)
@@ -124,21 +124,19 @@ ggplot(hmda_ca_final_1,aes(x=interest_rate))+
 
 Interest rate distribution does not appear to be normal (mean is greater than the median).
 
-```{r}
-ggplot(hmda_ca_final_1,aes(x=derived_sex))+
-  geom_boxplot(color="black", fill="purple")+
-  labs(title="Boxplot of Derived Sex", x="Derived Sex", y="Frequency")
-```
-
-Men appear more frequently in the data than women.
 
 ```{r}
-ggplot(hmda_ca_final_1,aes(x=derived_race))+
-  geom_boxplot(color="black", fill="purple")+
-  labs(title="Boxplot of Derived Race", x="Derived Race", y="Frequency")
+ggplot(hmda_ca,aes(y=income))+
+  geom_boxplot(color="black", fill="green")+
+  labs(title="Boxplot of Incomes", y="Income in dollars", x="Frequency")
 ```
 
-White applicants show up more than other races.
+
+```{r}
+ggplot(hmda_ca_final_1,aes(y=property_value))+
+  geom_boxplot(color="black", fill="red")+
+  labs(title="Boxplot of Property Values", y="Property Values in dollars", x="Frequency")
+```
 
 ```{r}
 library(ggplot2)
@@ -162,7 +160,50 @@ summary(hmda_ca_final_1$interest_rate)
 summary(hmda_ca_final_1$property_value)
 ```
 
-# Removing outliers from interest_rate and property_value
+```{r}
+summary(hmda_ca_final_1$income)
+```
+
+```{r}
+summary(hmda_ca_final_1$loan_amount)
+```
+
+
+```{r}
+qqnorm(hmda_ca_final_1$interest_rate,
+       main="QQ Plot of Interest Rates",
+       ylab="Interest Rate",
+       col="pink")
+qqline(hmda_ca_final_1$interest_rate)
+```
+
+
+```{r}
+qqnorm(hmda_ca_final_1$property_value,
+       main="QQ Plot of Property Values",
+       ylab="Property Value",
+       col="purple")
+qqline(hmda_ca_final_1$property_value)
+```
+
+```{r}
+qqnorm(hmda_ca_final_1$income,
+       main="QQ Plot of Income",
+       ylab="Income",
+       col="green")
+qqline(hmda_ca_final_1$income)
+```
+
+
+```{r}
+qqnorm(hmda_ca_final_1$loan_amount,
+       main="QQ Plot of Loan Amount",
+       ylab="Loan Amount",
+       col="blue")
+qqline(hmda_ca_final_1$loan_amount)
+```
+
+# Removing outliers from interest_rate, property value, income, and loan amount
 
 Can we approach more normalized distributions in loan amount and interest rates by removing outliers (1493 for interest rate, and 977 for property value)?
 
@@ -176,6 +217,43 @@ hmda_ca_final_no_outliers_2 <- outlierKD2(hmda_ca_final_no_outliers_1,property_v
 ```
 
 ```{r}
-loans <- outlierKD2(hmda_ca_final_no_outliers_2,income)
+hmda_ca_final_no_outliers_3 <- outlierKD2(hmda_ca_final_no_outliers_2,income)
 ```
 
+```{r}
+loans <- outlierKD2(hmda_ca_final_no_outliers_3,loan_amount)
+```
+
+```{r}
+qqnorm(loans$interest_rate,
+       main="QQ Plot of Interest Rates",
+       ylab="Interest Rate",
+       col="pink")
+qqline(loans$interest_rate)
+```
+```{r}
+qqnorm(loans$property_value,
+       main="QQ Plot of Property Values",
+       ylab="Property Value",
+       col="purple")
+qqline(loans$property_value)
+```
+
+
+```{r}
+qqnorm(loans$income,
+       main="QQ Plot of Income",
+       ylab="Income",
+       col="green")
+qqline(loans$income)
+```
+
+
+```{r}
+qqnorm(loans$loan_amount,
+       main="QQ Plot of Loan Amount",
+       ylab="Loan Amount",
+       col="blue")
+qqline(loans$loan_amount)
+```
+Numeric values are now much more normal and better suited for analysis.
