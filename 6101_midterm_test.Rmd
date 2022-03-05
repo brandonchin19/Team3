@@ -27,19 +27,93 @@ options(scientific=T, digits = 3)
 # use scipen=999 to prevent scientific notation at all times
 ```
 
-### Potential SMART questions:
+```{r modify_outlierKD2}
+#' Original outlierKD function by By Klodian Dhana,
+#' https://www.r-bloggers.com/identify-describe-plot-and-remove-the-outliers-from-the-dataset/
+#' Modified to have third argument for removing outliers instead of interactive prompt,
+#' and after removing outlier, original df will not be changed. The function returns the a df,
+#' which can be saved as original df name if desired.
+#' Also added QQ-plot in the output, with options to show/hide boxplot, histogram, qqplot.
+#' Check outliers, and option to remove them, save as a new dataframe.
+#' @param df The dataframe.
+#' @param var The variable in the dataframe to be checked for outliers
+#' @param rm Boolean. Whether to remove outliers or not.
+#' @param boxplt Boolean. Whether to show the boxplot, before and after outliers removed.
+#' @param histogram Boolean. Whether to show the histogram, before and after outliers removed.
+#' @param qqplt Boolean. Whether to show the qqplot, before and after outliers removed.
+#' @return The dataframe with outliers replaced by NA if rm==TRUE, or df if nothing changed
+#' @examples
+#'   outlierKD2(mydf, height, FALSE, TRUE, TRUE, TRUE)
+#'   mydf = outlierKD2(mydf, height, TRUE, TRUE, TRUE, TRUE)
+#'   mydfnew = outlierKD2(mydf, height, TRUE)
+#' @export
+outlierKD2 <- function(df, var, rm=TRUE, boxplt=TRUE, histogram=TRUE, qqplt=TRUE) {
+  dt = df # duplicate the dataframe for potential alteration
+  var_name <- eval(substitute(var),eval(dt))
+  na1 <- sum(is.na(var_name))
+  m1 <- mean(var_name, na.rm = T)
+  colTotal <- boxplt+histogram+qqplt
+  par(mfrow=c(2, max(2,colTotal)), oma=c(0,0,3,0)) # fixed issue with only 0 or 1 chart selected
+  if (qqplt) {
+    qqnorm(var_name, main = "With outliers")
+    qqline(var_name)
+  }
+  if (histogram) { hist(var_name, main="With outliers", xlab=NA, ylab=NA) }
+  if (boxplt) { boxplot(var_name, main="With outliers") }
 
-1. Were approved mortgage applications from white women under 35 awarded interest rates of one percentage point or higher than those from white men under 35 for properties worth over $400,000 in the United States in 2019?
-2. Predict the interest rates for applications of 
-### Potential issues with the data:
+  outlier <- boxplot.stats(var_name)$out
+  mo <- mean(outlier)
+  var_name <- ifelse(var_name %in% outlier, NA, var_name)
+  if (qqplt) {
+    qqnorm(var_name, main = "Without outliers")
+    qqline(var_name)
+  }
+  if (histogram) { hist(var_name, main="Without outliers", xlab=NA, ylab=NA) }
+  if (boxplt) { boxplot(var_name, main="Without outliers") }
+  
+  if(colTotal > 0) {  # if no charts are wanted, skip this section
+    title("Outlier Check", outer=TRUE)
+    na2 <- sum(is.na(var_name))
+    cat("Outliers identified:", na2 - na1, "\n")
+    cat("Propotion (%) of outliers:", round((na2 - na1) / sum(!is.na(var_name))*100, 1), "\n")
+    cat("Mean of the outliers:", round(mo, 2), "\n")
+    m2 <- mean(var_name, na.rm = T)
+    cat("Mean without removing outliers:", round(m1, 2), "\n")
+    cat("Mean if we remove outliers:", round(m2, 2), "\n")
+  }
 
-The smaller sample we selected (the first 10,000 records) is heavily weighted to the state of California. This could skew data unreasonably if we choose a research question that touches upon "state." Should we figure out how to "randomize" selection of dataset rows, or just make a note of it in our EDA?
+  # response <- readline(prompt="Do you want to remove outliers and to replace with NA? [yes/no]: ")
+  # if(response == "y" | response == "yes"){
+  if(rm){
+      dt[as.character(substitute(var))] <- invisible(var_name)
+      #assign(as.character(as.list(match.call())$dt), dt, envir = .GlobalEnv)
+      cat("Outliers successfully removed", "\n")
+      return(invisible(dt))
+  } else {
+      cat("Nothing changed", "\n")
+      return(invisible(df))
+  }
+}
+
+```
+
+### Research Topic:
+
+There is considerable evidence indicating lending disparities throughout the United States. (Steil et. al: 2018). For our research topic, we will explore lending practices in one of the fastest appreciating real estate markets over the past thirty years - the state of California. Specifically, we aim to look at the factors that are associated with denials for non-commercial mortgage loans.
+
+Our SMART question is:
+
+“Which factors drove denials for mortgages in California in 2019?”
+
+To answer this question, we are using the Federal Financial Institutions Examination Council's (FFIEC) Home Mortgage Disclosure Act (HMDA) dataset from 2019, located here: https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level-dataset/2019. We are  focusing on a subset of data of 10,000 observations from 2019 that we will further filter on California leaving us with 5,196 observations.
+
+Our Github repository address is:https://github.com/brandonchin19/Team3/.
 
 ### Load in dataset
 
 ```{r}
 hmda <- data.frame(read.csv("2019_lar.csv"))
-hmda
+str(hmda)
 ```
 
 # Check number of rows
@@ -55,80 +129,202 @@ nrow(hmda)
 xkabledplyhead(hmda,5)
 xkabledplytail(hmda,5)
 ```
-# view summary and structure
-```{r}
-summary(hmda)
-str(hmda)
-```
-# Some summaries
+
+# Subsetting to California Only
 
 ```{r}
-xkablesummary(hmda[22], title = "Loan amount summary of selected statistics" )
+hmda_ca <- subset(hmda,state_code=="CA")
+str(hmda_ca)
 ```
 
-
-#select variables
-```{r}
-df.selected <- subset(hmda,select=c(derived_ethnicity,derived_race,derived_sex,action_taken,loan_amount,interest_rate,property_value,applicant_age,income,denial_reason_1))
-```
-# check selected variables' structure
-```{r}
-str(df.selected$derived_ethnicity)
-str(df.selected$derived_race)
-str(df.selected$applicant_age)
-```
-
-# check missing value
-```{r}
-missvalue <- is.na(df.selected)
-summary(missvalue)
-```
-# visualization  
+# Subsetting to California Only; non-business properties; principal residences only
 
 ```{r}
-loadPkg("tidyverse")
-ggplot(hmda,aes(x=applicant_sex))+
-  geom_boxplot(color="black", fill="purple")+
-  labs(title="Boxplot of Applicant Sex", x="Applicant Sex", y="Frequency")
-df <- data.frame(id=LETTERS[1:4], min=c(13,15,23,2), max=c(20,30,40,11))
-
-ageFactor <- as.factor(df.selected$applicant_age)
-ethnicityFactor <- as.factor(df.selected$derived_ethnicity)
-numericrate <- as.numeric(df.selected$interest_rate)
-str(df.selected$interest_rate)
-ggplot(df.selected, aes(x = factor(derived_sex))) +
-    geom_bar()
-ggplot(df.selected, aes(x = factor(applicant_age))) +
-    geom_bar()
-ggplot(df.selected, aes(x = factor(derived_ethnicity))) +
-    geom_bar()
-hist(df.selected$action_taken)
-hist(df.selected$loan_amount)
-hist(df.selected$interest_rate)
-hist(df.selected$property_value)
-hist(df.selected$income)
-hist(df.selected$denial_reason_1)
+hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
+str(hmda_ca)
 ```
 
-The results of this look pretty weird. What are values 3, 4, and 6? 3 = not provided, 4 = not applicable, 6 = applicant selected both male (1) and female (2). We should remove 3, 4, and 6 or create a subset of only 1 and 2, then turn 1 and 2 into factors?
-
-# Subsetting
 
 ```{r}
-hmda_m_f <- subset(hmda,applicant_sex<3)
+hmda_ca <- subset(hmda_ca,occupancy_type=="1")
+str(hmda_ca)
 ```
 
-# Change applicant_sex vector to factor
+# Subsetting to only relevant columns
 
 ```{r}
-hmda_m_f[, 'applicant_sex'] <- as.factor(hmda_m_f[, 'applicant_sex'])
-summary(hmda_m_f)
+hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,78)]
+str(hmda_ca_final)
 ```
 
-# Re-do the applicant_sex boxplot
+
+# Changing vector types
 
 ```{r}
-ggplot(hmda_m_f,aes(x=applicant_sex))+
-  geom_boxplot(color="black", fill="purple")+
-  labs(title="Boxplot of Applicant Sex", x="Applicant Sex", y="Frequency")
+hmda_ca_final_1 = hmda_ca_final
+hmda_ca_final_1$derived_ethnicity = factor(hmda_ca_final$derived_ethnicity)
+hmda_ca_final_1$derived_race = factor(hmda_ca_final$derived_race)
+hmda_ca_final_1$derived_sex = factor(hmda_ca_final$derived_sex)
+hmda_ca_final_1$action_taken = factor(hmda_ca_final$action_taken)
+hmda_ca_final_1$loan_amount = as.numeric(hmda_ca_final$loan_amount)
+hmda_ca_final_1$interest_rate = as.numeric(hmda_ca_final$interest_rate)
+hmda_ca_final_1$property_value = as.numeric(hmda_ca_final$property_value)
+hmda_ca_final_1$income = as.numeric(hmda_ca_final$income)
+hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
+str(hmda_ca_final_1)
 ```
+
+# Histograms and Box Plots
+
+```{r}
+library(ggplot2)
+ggplot(hmda_ca_final_1,aes(x=loan_amount))+
+  geom_histogram(color="black", fill="purple")+
+  labs(title="Histogram of Loan Amount", x="Loan Amount in dollars", y="Frequency")
+```
+
+Loan amount distribution does not appear to be normal (mean is greater than the median).
+
+```{r}
+library(ggplot2)
+ggplot(hmda_ca_final_1,aes(x=interest_rate))+
+  geom_histogram(color="black", fill="pink")+
+  labs(title="Histogram of Interest Rates", x="Interest Rates", y="Frequency")
+```
+
+Interest rate distribution does not appear to be normal (mean is greater than the median).
+
+
+```{r}
+ggplot(hmda_ca,aes(y=income))+
+  geom_boxplot(color="black", fill="green")+
+  labs(title="Boxplot of Incomes", y="Income in dollars", x="Frequency")
+```
+
+
+```{r}
+ggplot(hmda_ca_final_1,aes(y=property_value))+
+  geom_boxplot(color="black", fill="blue")+
+  labs(title="Boxplot of Property Values", y="Property Values in dollars", x="Frequency")
+```
+
+```{r}
+library(ggplot2)
+qplot(data = hmda_ca_final_1,
+      x = loan_amount,
+      y = derived_race,
+      color = action_taken,
+      main="Loan amount and Race by Action taken")
+```
+
+Loan amounts and loan originations are higher for white borrowers; loan amounts for other races are lower, and loan rejection rates are higher particularly for Black or African American Borrowers. The lower the loan amount, the higher the likelihood of the loan being rejected?
+
+# Exploring columns that appear to have lots of NAs
+
+```{r}
+summary(hmda_ca_final_1$interest_rate)
+```
+
+
+```{r}
+summary(hmda_ca_final_1$property_value)
+```
+
+```{r}
+summary(hmda_ca_final_1$income)
+```
+
+```{r}
+summary(hmda_ca_final_1$loan_amount)
+```
+
+
+```{r}
+qqnorm(hmda_ca_final_1$interest_rate,
+       main="QQ Plot of Interest Rates",
+       ylab="Interest Rate",
+       col="pink")
+qqline(hmda_ca_final_1$interest_rate)
+```
+
+
+```{r}
+qqnorm(hmda_ca_final_1$property_value,
+       main="QQ Plot of Property Values",
+       ylab="Property Value",
+       col="blue")
+qqline(hmda_ca_final_1$property_value)
+```
+
+```{r}
+qqnorm(hmda_ca_final_1$income,
+       main="QQ Plot of Income",
+       ylab="Income",
+       col="green")
+qqline(hmda_ca_final_1$income)
+```
+
+
+```{r}
+qqnorm(hmda_ca_final_1$loan_amount,
+       main="QQ Plot of Loan Amount",
+       ylab="Loan Amount",
+       col="purple")
+qqline(hmda_ca_final_1$loan_amount)
+```
+
+# Removing outliers from interest_rate, property value, income, and loan amount
+
+Can we approach more normalized distributions in loan amount, interest rates, income, and property value by removing outliers?
+
+```{r}
+hmda_ca_final_no_outliers_1 <- outlierKD2(hmda_ca_final_1,interest_rate)
+```
+
+
+```{r}
+hmda_ca_final_no_outliers_2 <- outlierKD2(hmda_ca_final_no_outliers_1,property_value)
+```
+
+```{r}
+hmda_ca_final_no_outliers_3 <- outlierKD2(hmda_ca_final_no_outliers_2,income)
+```
+
+```{r}
+loans <- outlierKD2(hmda_ca_final_no_outliers_3,loan_amount)
+```
+
+```{r}
+qqnorm(loans$interest_rate,
+       main="QQ Plot of Interest Rates",
+       ylab="Interest Rate",
+       col="pink")
+qqline(loans$interest_rate)
+```
+```{r}
+qqnorm(loans$property_value,
+       main="QQ Plot of Property Values",
+       ylab="Property Value",
+       col="blue")
+qqline(loans$property_value)
+```
+
+
+```{r}
+qqnorm(loans$income,
+       main="QQ Plot of Income",
+       ylab="Income",
+       col="green")
+qqline(loans$income)
+```
+
+
+```{r}
+qqnorm(loans$loan_amount,
+       main="QQ Plot of Loan Amount",
+       ylab="Loan Amount",
+       col="purple")
+qqline(loans$loan_amount)
+```
+
+With outliers removed, the numerical values are more normally distributed and better suited for analysis.
