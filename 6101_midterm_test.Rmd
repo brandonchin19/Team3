@@ -173,6 +173,22 @@ hmda_ca_final_1$income = as.numeric(hmda_ca_final$income)
 hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
 str(hmda_ca_final_1)
 ```
+# checking missing value
+```{r}
+missvalue <- is.na(hmda_ca_final_1)
+summary(missvalue)
+```
+
+# remove/replace missing value
+```{r}
+loadPkg("tidyverse")
+hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda_ca_final_1$interest_rate, na.rm = TRUE)
+hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda_ca_final_1$interest_rate, na.rm = TRUE)
+hmda_ca_final_1 %>% drop_na(property_value)
+na.omit(hmda_ca_final_1, cols="income")
+
+
+```
 
 # Histograms and Box Plots
 
@@ -181,6 +197,22 @@ library(ggplot2)
 ggplot(hmda_ca_final_1,aes(x=loan_amount))+
   geom_histogram(color="black", fill="purple")+
   labs(title="Histogram of Loan Amount", x="Loan Amount in dollars", y="Frequency")
+
+ggplot(hmda_ca_final_1, aes(x = factor(derived_sex))) +
+    geom_bar()
+ggplot(hmda_ca_final_1, aes(x = factor(applicant_age))) +
+    geom_bar()
+ggplot(hmda_ca_final_1, aes(x = factor(derived_ethnicity))) +
+    geom_bar()
+ggplot(hmda_ca_final_1, aes(x = factor(action_taken))) +
+    geom_bar()
+
+hist(hmda_ca_final_1$loan_amount)
+hist(hmda_ca_final_1$interest_rate)
+hist(hmda_ca_final_1$property_value)
+hist(hmda_ca_final_1$income)
+
+
 ```
 
 Loan amount distribution does not appear to be normal (mean is greater than the median).
