@@ -204,7 +204,7 @@ ggplot(hmda_ca,aes(y=income))+
 
 ```{r}
 ggplot(hmda_ca_final_1,aes(y=property_value))+
-  geom_boxplot(color="black", fill="red")+
+  geom_boxplot(color="black", fill="blue")+
   labs(title="Boxplot of Property Values", y="Property Values in dollars", x="Frequency")
 ```
 
@@ -252,7 +252,7 @@ qqline(hmda_ca_final_1$interest_rate)
 qqnorm(hmda_ca_final_1$property_value,
        main="QQ Plot of Property Values",
        ylab="Property Value",
-       col="purple")
+       col="blue")
 qqline(hmda_ca_final_1$property_value)
 ```
 
@@ -269,7 +269,7 @@ qqline(hmda_ca_final_1$income)
 qqnorm(hmda_ca_final_1$loan_amount,
        main="QQ Plot of Loan Amount",
        ylab="Loan Amount",
-       col="blue")
+       col="purple")
 qqline(hmda_ca_final_1$loan_amount)
 ```
 
@@ -305,7 +305,7 @@ qqline(loans$interest_rate)
 qqnorm(loans$property_value,
        main="QQ Plot of Property Values",
        ylab="Property Value",
-       col="purple")
+       col="blue")
 qqline(loans$property_value)
 ```
 
@@ -323,7 +323,7 @@ qqline(loans$income)
 qqnorm(loans$loan_amount,
        main="QQ Plot of Loan Amount",
        ylab="Loan Amount",
-       col="blue")
+       col="purple")
 qqline(loans$loan_amount)
 ```
 
