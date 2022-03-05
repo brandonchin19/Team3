@@ -205,7 +205,7 @@ qqline(hmda_ca_final_1$loan_amount)
 
 # Removing outliers from interest_rate, property value, income, and loan amount
 
-Can we approach more normalized distributions in loan amount and interest rates by removing outliers (1493 for interest rate, and 977 for property value)?
+Can we approach more normalized distributions in loan amount, interest rates, income, and property value by removing outliers?
 
 ```{r}
 hmda_ca_final_no_outliers_1 <- outlierKD2(hmda_ca_final_1,interest_rate)
