@@ -153,7 +153,7 @@ str(hmda_ca)
 # Subsetting to only relevant columns
 
 ```{r}
-hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,78)]
+hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,50, 62,74,78)]
 str(hmda_ca_final)
 ```
 
@@ -301,6 +301,7 @@ qqnorm(loans$interest_rate,
        col="pink")
 qqline(loans$interest_rate)
 ```
+
 ```{r}
 qqnorm(loans$property_value,
        main="QQ Plot of Property Values",
@@ -328,3 +329,23 @@ qqline(loans$loan_amount)
 ```
 
 With outliers removed, the numerical values are more normally distributed and better suited for analysis.
+
+```{r}
+library(lattice)
+library(ggplot2)
+pairs(loans)
+```
+
+
+
+```{r}
+str(loans)
+```
+
+# Correlation plot using numeric/integer values
+
+
+```{r}
+loadPkg("corrplot")
+corrplot(cor(loans[5:11]), method = "shade")
+```
