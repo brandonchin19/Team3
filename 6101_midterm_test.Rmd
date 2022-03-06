@@ -132,11 +132,13 @@ xkabledplyhead(hmda,5)
 xkabledplytail(hmda,5)
 ```
 
-# Subsetting to California Only
+# Subsetting to California Only & renaming some of the variables
 
 ```{r}
 hmda_ca <- subset(hmda,state_code=="CA")
 str(hmda_ca)
+rename(hmda_ca, msa = derived_msa_md, ethnicity=derived_ethnicity, race=derived_race,
+       sex=derived_sex)
 ```
 
 # Subsetting to California Only; non-business properties; principal residences only
@@ -144,6 +146,7 @@ str(hmda_ca)
 ```{r}
 hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
 str(hmda_ca)
+
 ```
 
 #Subsetting principal residences only; tail and head check to make sure that the geography is widespread/our sample is "random"; 48 unique counties (if there's time, check if geographically clustered)
@@ -171,6 +174,7 @@ hmda_ca<-hmda_ca1
 ```{r}
 hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,50, 62,74,78)]
 str(hmda_ca_final)
+
 ```
 
 
@@ -188,6 +192,9 @@ hmda_ca_final_1$property_value = as.numeric(hmda_ca_final$property_value)
 hmda_ca_final_1$income = as.numeric(hmda_ca_final$income)
 hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
 str(hmda_ca_final_1)
+hmda_ca_final_1<-rename(hmda_ca_final_1, ethnicity=derived_ethnicity, race=derived_race,
+       sex=applicant_sex, age= applicant_age)
+names(hmda_ca_final_1)
 ```
 
 # Histograms and Box Plots
@@ -228,7 +235,7 @@ ggplot(hmda_ca_final_1,aes(y=property_value))+
 library(ggplot2)
 qplot(data = hmda_ca_final_1,
       x = loan_amount,
-      y = derived_race,
+      y = race,
       color = action_taken,
       main="Loan amount and Race by Action taken")
 ```
@@ -384,6 +391,9 @@ loadPkg("corrplot")
 corrplot(cor_loans)
 ```
 
+
+#Question for the presentation: are approvals and denials independent of applicant's gender, race, age, and ethnicity?
+
 #Chi-square tests/create a new variable action in order to perform the tests
 ``` {r}
 unique(loans$action_taken)
@@ -393,19 +403,19 @@ unique(loans$action)
 ```
 Chi-Square test is that no relationship exists on the categorical variables in the population
 
-#Chi-Square Test for Loan Approval and Race
+
+#Chi-Square Test for Loan Approval and Race: result=>reject the null of independence (there is an issue with results because, I think, some groups are underrepresented)
 ``` {r}
-loadPkg("MASS")
-contable1 = table(loans$derived_race, loans$action)
+contable1 = table(loans$race, loans$action)
 xkabledply(contable1, title="Contingency table for Loan Approval and Race")
 
 chitest1 = chisq.test(contable1)
 chitest1
 ```
 
-#Chi-Square Test for Loan Approval and Sex
+#Chi-Square Test for Loan Approval and Sex: result=>reject the null of independence
 ```{r}
-contable2 = table(loans$derived_sex, loans$action)
+contable2 = table(loans$sex, loans$action)
 xkabledply(contable2, title="Contingency table for Loan Approval and Sex")
 
 chitest2 = chisq.test(contable2)
@@ -413,9 +423,37 @@ chitest2
 
 ```
 ```{r}
-contable3 = table(loans$derived_ethnicity, loans$action)
+contable3 = table(loans$ethnicity, loans$action)
 xkabledply(contable3, title="Contingency table for Loan Approval and Ethnicity")
 
 chitest3 = chisq.test(contable3)
 chitest3
+```
+#Chi-Square Test for Loan Approval and Race: result=>reject the null of independence (there is an issue with results because, I think, some groups are underrepresented); look into how to fix this
+``` {r}
+contable4 = table(loans$applicant_age, loans$action)
+xkabledply(contable4, title="Contingency table for Loan Approval and Age")
+
+chitest4 = chisq.test(contable4)
+chitest4
+```
+
+#Create a new binary variable called "actionb"; 1=Denied; 0=Approved because we are interested in denials for our question
+``` {r}
+loans$actionb<-recode(loans$action_taken, "3"="1", 
+                           "1"="0")
+loans$actionb<-as.factor(loans$actionb)
+str(loans)
+unique(loans$actionb)
+```
+
+#Try ANOVA
+
+
+
+#Start the logistic regression modeling
+```{r}
+library(ISLR)
+m1<-glm(actionb~derived_race+derived_sex+derived_ethnicity-1, family = binomial(link = "logit"), data=loans )
+summary(m1)
 ```
