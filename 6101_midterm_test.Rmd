@@ -1,4 +1,4 @@
-
+---
 title: "DATS 6101 Midterm"
 authors: "Brandon Chin, Paul Kelly, Ksenia Shadrina, Luke Wu"
 date: "3/5/22"
@@ -19,8 +19,7 @@ output:
 # some of common options (and the defaults) are: 
 # include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
 library(ezids)
-library(tidyverse) 
-library(ggplot2)
+library(tidyverse)
 # knitr::opts_chunk$set(warning = F, results = "markup", message = F)
 knitr::opts_chunk$set(warning = F, results = "show", message = F)
 options(scientific=T, digits = 3) 
@@ -116,13 +115,15 @@ Our Github repository address is:https://github.com/brandonchin19/Team3/.
 ```{r}
 hmda <- data.frame(read.csv("2019_lar.csv"))
 str(hmda)
+
 ```
 
-# Check number of rows and variabls: 10K rows & 99 variables
+# Check number of rows
 
 ```{r}
-dim(hmda)
+nrow(hmda)
 ```
+
 
 # Check head and tail of dataframe
 
@@ -131,54 +132,43 @@ xkabledplyhead(hmda,5)
 xkabledplytail(hmda,5)
 ```
 
-# Subsetting to California Only: leaving us with 5,441 observations
+# Subsetting to California Only
 
 ```{r}
 hmda_ca <- subset(hmda,state_code=="CA")
-dim(hmda_ca)
+str(hmda_ca)
 ```
 
-# Subsetting California to non-business properties (leaving us with 5,196 observations); 
+# Subsetting to California Only; non-business properties; principal residences only
+
 ```{r}
 hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
-dim(hmda_ca)
+str(hmda_ca)
 ```
 
 #Subsetting principal residences only; tail and head check to make sure that the geography is widespread/our sample is "random"; 48 unique counties (if there's time, check if geographically clustered)
+
 ```{r}
+hmda_ca <- subset(hmda_ca,occupancy_type=="1")
+str(hmda_ca)
+
 hmda_ca <- subset(hmda_ca,occupancy_type=="1")
 dim(hmda_ca)
 xkabledplyhead(hmda_ca,5)
 xkabledplytail(hmda_ca,5)
-#loadPkg("sqldf")
-#names(hmda_ca)
-#sqldf("select count(distinct(county_code)) from hmda_ca")
+loadPkg("sqldf")
+names(hmda_ca)
+sqldf("select count(distinct(county_code)) from hmda_ca")
 
-```
-#Subsetting further for action taken; since we are interested in successful vs. unsuccesful applications, it might make sense to leave in only 1, 2, and 3: https://ffiec.cfpb.gov/documentation/2019/lar-data-fields/; the definitions are:
-1 - Loan originated
-2 - Application approved but not accepted
-3 - Application denied
-4 - Application withdrawn by applicant
-5 - File closed for incompleteness
-6 - Purchased loan
-7 - Preapproval request denied
-8 - Preapproval request approved but not accepted
-we only observe 1-5 in our subset for CA; 4 & 5 seem administrative; this leaves us with 4170 observations
-
-```{r}
-unique(hmda_ca$action_taken)
-hmda_ca1<-hmda_ca%>%filter(action_taken %in% c("1", "2", "3"))
-dim(hmda_ca1)
 ```
 
 # Subsetting to only relevant columns
 
 ```{r}
-hmda_ca_final <- hmda_ca1[c(10,11,12,13,22,24,39,46,78)]
+hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,50, 62,74,78)]
 str(hmda_ca_final)
-dim(hmda_ca_final)
 ```
+
 
 # Changing vector types
 
@@ -196,7 +186,7 @@ hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
 str(hmda_ca_final_1)
 ```
 
-# EDA: Histograms and Box Plots
+# Histograms and Box Plots
 
 ```{r}
 library(ggplot2)
@@ -215,6 +205,7 @@ ggplot(hmda_ca_final_1,aes(x=interest_rate))+
 ```
 
 Interest rate distribution does not appear to be normal (mean is greater than the median).
+
 
 ```{r}
 ggplot(hmda_ca,aes(y=income))+
@@ -245,11 +236,7 @@ Loan amounts and loan originations are higher for white borrowers; loan amounts 
 ```{r}
 summary(hmda_ca_final_1$interest_rate)
 ```
-#Exploring the NAs rows
 
-```{r}
-glimpse(hmda_ca_final_1%>%filter(is.na(interest_rate)))
-```
 
 ```{r}
 summary(hmda_ca_final_1$property_value)
@@ -271,7 +258,7 @@ qqnorm(hmda_ca_final_1$interest_rate,
        col="pink")
 qqline(hmda_ca_final_1$interest_rate)
 ```
-Interest rates are not normally distributed
+
 
 ```{r}
 qqnorm(hmda_ca_final_1$property_value,
@@ -280,7 +267,6 @@ qqnorm(hmda_ca_final_1$property_value,
        col="blue")
 qqline(hmda_ca_final_1$property_value)
 ```
-Property values are not normally distributed. 
 
 ```{r}
 qqnorm(hmda_ca_final_1$income,
@@ -327,6 +313,7 @@ qqnorm(loans$interest_rate,
        col="pink")
 qqline(loans$interest_rate)
 ```
+
 ```{r}
 qqnorm(loans$property_value,
        main="QQ Plot of Property Values",
@@ -354,18 +341,37 @@ qqline(loans$loan_amount)
 ```
 
 With outliers removed, the numerical values are more normally distributed and better suited for analysis.
+
 ```{r}
-unique(loans$action_taken)
-names(loans)
+library(lattice)
+library(ggplot2)
+pairs(loans)
 ```
 
 
-# Correlation for numerical values
+
 ```{r}
-corrt = subset(loans, select = -c(derived_ethnicity, derived_race, derived_sex, applicant_age, action_taken))
-cort1<-(!(is.na(corrt)))
-str(cort1)
+str(loans)
+```
+
+# Correlation plot using numeric/integer values
+#Creating new subset of loans data called loans_all_num which holds all numeric columns from loan dataset
+
+```{r}
+loans_all_num<-loans[5:11]
+str(loans_all_num)
+
+```
+#Creating a correlation matrix table from loans_all_num and named it cor_loans
+#Printed table of cor_loans
+#Printed corplot of cor_loans
 
 
+```{r}
 
+cor_loans<-cor(loans_all_num, use="complete.obs")
+xkabledply(cor_loans)
+
+loadPkg("corrplot")
+corrplot(cor_loans)
 ```
