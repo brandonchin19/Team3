@@ -344,25 +344,16 @@ str(loans)
 ```
 
 # Correlation plot using numeric/integer values
-
-
-```{r}
-
-
-```
+#Creating new subset of loans data called loans_all_num which holds all numeric columns from loan dataset
 
 ```{r}
 loans_all_num<-loans[5:11]
 str(loans_all_num)
 
-
-
-loans_all_num$applicant_ethnicity_1 = as.numeric(loans_all_num$applicant_ethnicity_1)
-loans_all_num$applicant_race_1 = as.numeric(loans_all_num$applicant_race_1 )
-loans_all_num$applicant_sex   = as.numeric(loans_all_num$applicant_sex)
-str(loans_all_num)
 ```
-
+#Creating a correlation matrix table from loans_all_num and named it cor_loans
+#Printed table of cor_loans
+#Printed corplot of cor_loans
 
 
 ```{r}
