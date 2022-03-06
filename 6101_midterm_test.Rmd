@@ -112,8 +112,9 @@ Our Github repository address is:https://github.com/brandonchin19/Team3/.
 ### Load in dataset
 
 ```{r}
-hmda <- data.frame(read.csv("2019_lar.csv"))
+hmda<-read.csv("~/Github/Team3/2019_lar.csv")
 str(hmda)
+
 ```
 
 # Check number of rows
@@ -346,6 +347,31 @@ str(loans)
 
 
 ```{r}
+
+
+```
+
+```{r}
+loans_all_num<-loans[5:11]
+str(loans_all_num)
+
+
+
+loans_all_num$applicant_ethnicity_1 = as.numeric(loans_all_num$applicant_ethnicity_1)
+loans_all_num$applicant_race_1 = as.numeric(loans_all_num$applicant_race_1 )
+loans_all_num$applicant_sex   = as.numeric(loans_all_num$applicant_sex)
+str(loans_all_num)
+```
+
+
+
+```{r}
+
+cor_loans<-cor(loans_all_num, use="complete.obs")
+xkabledply(cor_loans)
+
 loadPkg("corrplot")
-corrplot(cor(loans[5:11]), method = "shade")
+corrplot(cor_loans)
+
+
 ```
