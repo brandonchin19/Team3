@@ -431,7 +431,7 @@ chitest3
 ```
 #Chi-Square Test for Loan Approval and Race: result=>reject the null of independence (there is an issue with results because, I think, some groups are underrepresented); look into how to fix this
 ``` {r}
-contable4 = table(loans$applicant_age, loans$action)
+contable4 = table(loans$age, loans$action)
 xkabledply(contable4, title="Contingency table for Loan Approval and Age")
 
 chitest4 = chisq.test(contable4)
@@ -445,15 +445,14 @@ loans$actionb<-recode(loans$action_taken, "3"="1",
 loans$actionb<-as.factor(loans$actionb)
 str(loans)
 unique(loans$actionb)
+View(loans)
+names(loans)
 ```
 
-#Try ANOVA
 
-
-
-#Start the logistic regression modeling
+#Start the logistic regression modeling: "probability of getting denied"
 ```{r}
 library(ISLR)
-m1<-glm(actionb~derived_race+derived_sex+derived_ethnicity-1, family = binomial(link = "logit"), data=loans )
+m1<-glm(actionb~income, family = binomial(link = "logit"), data=loans )
 summary(m1)
 ```
