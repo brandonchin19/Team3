@@ -150,16 +150,20 @@ str(hmda_ca)
 
 ```{r}
 hmda_ca <- subset(hmda_ca,occupancy_type=="1")
-str(hmda_ca)
-
-hmda_ca <- subset(hmda_ca,occupancy_type=="1")
 dim(hmda_ca)
 xkabledplyhead(hmda_ca,5)
 xkabledplytail(hmda_ca,5)
 loadPkg("sqldf")
 names(hmda_ca)
 sqldf("select count(distinct(county_code)) from hmda_ca")
+```
 
+
+#Subsetting to only relevant actions: denial or approval
+
+```{r}
+hmda_ca1<-hmda_ca%>%filter(action_taken %in% c("1", "3"))
+hmda_ca<-hmda_ca1
 ```
 
 # Subsetting to only relevant columns
@@ -177,7 +181,7 @@ hmda_ca_final_1 = hmda_ca_final
 hmda_ca_final_1$derived_ethnicity = factor(hmda_ca_final$derived_ethnicity)
 hmda_ca_final_1$derived_race = factor(hmda_ca_final$derived_race)
 hmda_ca_final_1$derived_sex = factor(hmda_ca_final$derived_sex)
-hmda_ca_final_1$action_taken = factor(hmda_ca_final$action_taken)
+hmda_ca_final_1$action_taken = as.numeric(hmda_ca_final$action_taken)
 hmda_ca_final_1$loan_amount = as.numeric(hmda_ca_final$loan_amount)
 hmda_ca_final_1$interest_rate = as.numeric(hmda_ca_final$interest_rate)
 hmda_ca_final_1$property_value = as.numeric(hmda_ca_final$property_value)
@@ -361,11 +365,15 @@ str(loans)
 loans_all_num<-loans[5:11]
 str(loans_all_num)
 
+head(loans_all_num)
+head(loans)
+
 ```
 #Creating a correlation matrix table from loans_all_num and named it cor_loans
 #Printed table of cor_loans
 #Printed corplot of cor_loans
 
+#Question KS: is it possible to add action taken here?
 
 ```{r}
 
@@ -374,4 +382,40 @@ xkabledply(cor_loans)
 
 loadPkg("corrplot")
 corrplot(cor_loans)
+```
+
+#Chi-square tests/create a new variable action in order to perform the tests
+``` {r}
+unique(loans$action_taken)
+loans$action<-recode(loans$action_taken, "3"="Denied", 
+                           "1"="Approved")
+unique(loans$action)
+```
+Chi-Square test is that no relationship exists on the categorical variables in the population
+
+#Chi-Square Test for Loan Approval and Race
+``` {r}
+loadPkg("MASS")
+contable1 = table(loans$derived_race, loans$action)
+xkabledply(contable1, title="Contingency table for Loan Approval and Race")
+
+chitest1 = chisq.test(contable1)
+chitest1
+```
+
+#Chi-Square Test for Loan Approval and Sex
+```{r}
+contable2 = table(loans$derived_sex, loans$action)
+xkabledply(contable2, title="Contingency table for Loan Approval and Sex")
+
+chitest2 = chisq.test(contable2)
+chitest2
+
+```
+```{r}
+contable3 = table(loans$derived_ethnicity, loans$action)
+xkabledply(contable3, title="Contingency table for Loan Approval and Ethnicity")
+
+chitest3 = chisq.test(contable3)
+chitest3
 ```
