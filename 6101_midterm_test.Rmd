@@ -186,8 +186,6 @@ hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda
 hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda_ca_final_1$interest_rate, na.rm = TRUE)
 hmda_ca_final_1 %>% drop_na(property_value)
 na.omit(hmda_ca_final_1, cols="income")
-
-
 ```
 
 # Histograms and Box Plots
