@@ -380,7 +380,7 @@ head(loans)
 #Printed table of cor_loans
 #Printed corplot of cor_loans
 
-#Question KS: is it possible to add action taken here?
+#Question KS: is it possible to add action taken here? Not sure this is useful because our main binary variable is not here
 
 ```{r}
 
@@ -400,6 +400,7 @@ unique(loans$action_taken)
 loans$action<-recode(loans$action_taken, "3"="Denied", 
                            "1"="Approved")
 unique(loans$action)
+str(loans)
 ```
 Chi-Square test is that no relationship exists on the categorical variables in the population
 
@@ -415,7 +416,7 @@ chitest1
 
 #Chi-Square Test for Loan Approval and Sex: result=>reject the null of independence
 ```{r}
-contable2 = table(loans$sex, loans$action)
+contable2 = table(loans$derived_sex, loans$action)
 xkabledply(contable2, title="Contingency table for Loan Approval and Sex")
 
 chitest2 = chisq.test(contable2)
@@ -444,15 +445,12 @@ loans$actionb<-recode(loans$action_taken, "3"="1",
                            "1"="0")
 loans$actionb<-as.factor(loans$actionb)
 str(loans)
-unique(loans$actionb)
-View(loans)
-names(loans)
 ```
 
 
-#Start the logistic regression modeling: "probability of getting denied"
+#Start the logistic regression model building: "probability of getting denied because 1= denial, and 0=approval in our model"
 ```{r}
 library(ISLR)
-m1<-glm(actionb~income, family = binomial(link = "logit"), data=loans )
+m1<-glm(actionb~income+race+derived_sex, family = binomial, data=loans )
 summary(m1)
 ```
