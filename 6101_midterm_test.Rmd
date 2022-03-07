@@ -150,6 +150,26 @@ hmda_ca <- subset(hmda_ca,occupancy_type=="1")
 str(hmda_ca)
 ```
 
+#View categorical and logical variables 
+```{r}
+#library("dplyr") 
+
+cha_cols <- unlist(lapply(hmda_ca, is.character))
+cha_cols <- subset(cha_cols,cha_cols=='TRUE')
+cha_cols
+summary(cha_cols)
+logi_cols <- unlist(lapply(hmda_ca, is.logical))
+logi_cols <- subset(cha_cols,logi_cols=='TRUE')
+logi_cols
+summary(logi_cols)
+```
+#View numerical variables 
+```{r}
+num_cols <- select_if(hmda_ca, is.numeric)
+num_cols
+summary(num_cols)
+
+```
 # Subsetting to only relevant columns
 
 ```{r}
@@ -189,6 +209,14 @@ hmda_ca_final_2 <- na.omit(hmda_ca_final_1, cols="income")
 missvalue1 <- is.na(hmda_ca_final_2)
 summary(missvalue1)
 ```
+#checking outliers 
+```{r}
+boxplot(hmda_ca_final_2$interest_rate)
+boxplot(hmda_ca_final_2$loan_amount)
+boxplot(hmda_ca_final_2$property_value)
+boxplot(hmda_ca_final_2$income)
+
+```
 #descripitve analysis
 ```{r}
 
@@ -219,7 +247,17 @@ hist(hmda_ca_final_1$interest_rate)
 hist(hmda_ca_final_1$property_value)
 hist(hmda_ca_final_1$income)
 
+barplot(hmda_ca_final_1, beside = TRUE,
+        col = c("derived_sex", "applicant_age", "derived_ethnicity",
+                "action_taken"),
+        legend.text = rownames(hmda_ca_final_1), ylim = c(0, 100))
+title(main = "a", font.main = 4)
 
+```
+#data normalization 
+```{r}
+continuous_feature
+conti
 ```
 
 Loan amount distribution does not appear to be normal (mean is greater than the median).
