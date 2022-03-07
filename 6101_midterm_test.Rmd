@@ -154,14 +154,12 @@ str(hmda_ca)
 ```{r}
 #library("dplyr") 
 
-cha_cols <- unlist(lapply(hmda_ca, is.character))
-cha_cols <- subset(cha_cols,cha_cols=='TRUE')
+#cha_cols <- unlist(lapply(hmda_ca, is.character))
+#cha_cols <- subset(cha_cols,cha_cols=='TRUE')
+cha_cols <- select_if(hmda_ca, is.character)
 cha_cols
 summary(cha_cols)
-logi_cols <- unlist(lapply(hmda_ca, is.logical))
-logi_cols <- subset(cha_cols,logi_cols=='TRUE')
-logi_cols
-summary(logi_cols)
+
 ```
 #View numerical variables 
 ```{r}
@@ -256,11 +254,19 @@ title(main = "a", font.main = 4)
 ```
 #data normalization 
 ```{r}
-continuous_feature
-conti
+
 ```
 
 Loan amount distribution does not appear to be normal (mean is greater than the median).
+
+#scatter plot
+```{r}
+rate_income.plot <- plot(hmda_ca_final_2$interest_rate ~ hmda_ca_final_2$income, pch = 19, col = "black")
+loan_value.plot <- plot(hmda_ca_final_2$loan_amount ~ hmda_ca_final_2$property_value, pch = 19, col = "black")
+rate_loan <- plot(hmda_ca_final_2$interest_rate ~ hmda_ca_final_2$loan_amount, pch = 19, col = "black")
+value_income <- plot(hmda_ca_final_2$property_value ~ hmda_ca_final_2$income, pch = 19, col = "black")
+
+```
 
 ```{r}
 library(ggplot2)
