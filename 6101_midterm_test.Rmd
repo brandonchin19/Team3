@@ -182,14 +182,23 @@ summary(missvalue)
 # remove/replace missing value
 ```{r}
 loadPkg("tidyverse")
-hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda_ca_final_1$interest_rate, na.rm = TRUE)
-hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda_ca_final_1$interest_rate, na.rm = TRUE)
-hmda_ca_final_1 %>% drop_na(property_value)
-na.omit(hmda_ca_final_1, cols="income")
+hmda_ca_final_2 <- hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda_ca_final_1$interest_rate, na.rm = TRUE)
+
+hmda_ca_final_2 <- hmda_ca_final_1 %>% drop_na(property_value)
+hmda_ca_final_2 <- na.omit(hmda_ca_final_1, cols="income")
+missvalue1 <- is.na(hmda_ca_final_2)
+summary(missvalue1)
 ```
+#descripitve analysis
+```{r}
 
+Numerical_var <- subset(hmda_ca_final_2,select=c(loan_amount, income, property_value))
+var(Numerical_var)
+var(hmda_ca_final_2$loan_amount)
+var(hmda_ca_final_2$income)
+var(hmda_ca_final_2$property_value)
+```
 # Histograms and Box Plots
-
 ```{r}
 library(ggplot2)
 ggplot(hmda_ca_final_1,aes(x=loan_amount))+
