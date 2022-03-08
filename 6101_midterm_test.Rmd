@@ -423,6 +423,8 @@ chitest2 = chisq.test(contable2)
 chitest2
 
 ```
+
+#Chi-Square Test for Loan Approval and Ethncity: result=>reject the null of independence
 ```{r}
 contable3 = table(loans$ethnicity, loans$action)
 xkabledply(contable3, title="Contingency table for Loan Approval and Ethnicity")
@@ -430,7 +432,7 @@ xkabledply(contable3, title="Contingency table for Loan Approval and Ethnicity")
 chitest3 = chisq.test(contable3)
 chitest3
 ```
-#Chi-Square Test for Loan Approval and Race: result=>reject the null of independence (there is an issue with results because, I think, some groups are underrepresented); look into how to fix this
+#Chi-Square Test for Loan Approval and Age: result=>reject the null of independence (there is an issue with results because, I think, some groups are underrepresented); look into how to fix this
 ``` {r}
 contable4 = table(loans$age, loans$action)
 xkabledply(contable4, title="Contingency table for Loan Approval and Age")
@@ -439,12 +441,20 @@ chitest4 = chisq.test(contable4)
 chitest4
 ```
 
-#Create a new binary variable called "actionb"; 1=Denied; 0=Approved because we are interested in denials for our question
+#Create a new binary variable called "actionb"; 1=Denied; 0=Approved because we are interested in denials for our question; select only needed variables for logit regression
 ``` {r}
 loans$actionb<-recode(loans$action_taken, "3"="1", 
                            "1"="0")
 loans$actionb<-as.factor(loans$actionb)
 str(loans)
+unloadPkg("MASS") 
+
+#subset variables for logit  regression
+loan_reg<-loans%>%select(ethnicity, race, derived_sex, loan_amount, interest_rate,
+                         property_value, actionb, income)
+
+str(loan_reg)
+dim(loan_reg)
 ```
 
 
