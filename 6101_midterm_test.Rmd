@@ -152,21 +152,16 @@ str(hmda_ca)
 
 #View categorical and logical variables 
 ```{r}
-#library("dplyr") 
-
-#cha_cols <- unlist(lapply(hmda_ca, is.character))
-#cha_cols <- subset(cha_cols,cha_cols=='TRUE')
+library("dplyr") 
 cha_cols <- select_if(hmda_ca, is.character)
 cha_cols
 summary(cha_cols)
-
 ```
 #View numerical variables 
 ```{r}
 num_cols <- select_if(hmda_ca, is.numeric)
 num_cols
 summary(num_cols)
-
 ```
 # Subsetting to only relevant columns
 
@@ -224,41 +219,42 @@ var(hmda_ca_final_2$loan_amount)
 var(hmda_ca_final_2$income)
 var(hmda_ca_final_2$property_value)
 ```
-# Histograms and Box Plots
+# Histograms and Box Plots for categorical variables 
 ```{r}
 library(ggplot2)
-ggplot(hmda_ca_final_1,aes(x=loan_amount))+
-  geom_histogram(color="black", fill="purple")+
-  labs(title="Histogram of Loan Amount", x="Loan Amount in dollars", y="Frequency")
-
-ggplot(hmda_ca_final_1, aes(x = factor(derived_sex))) +
-    geom_bar()
-ggplot(hmda_ca_final_1, aes(x = factor(applicant_age))) +
-    geom_bar()
-ggplot(hmda_ca_final_1, aes(x = factor(derived_ethnicity))) +
-    geom_bar()
-ggplot(hmda_ca_final_1, aes(x = factor(action_taken))) +
-    geom_bar()
-
-hist(hmda_ca_final_1$loan_amount)
-hist(hmda_ca_final_1$interest_rate)
-hist(hmda_ca_final_1$property_value)
-hist(hmda_ca_final_1$income)
-
-barplot(hmda_ca_final_1, beside = TRUE,
-        col = c("derived_sex", "applicant_age", "derived_ethnicity",
-                "action_taken"),
-        legend.text = rownames(hmda_ca_final_1), ylim = c(0, 100))
-title(main = "a", font.main = 4)
-
+ggplot(hmda_ca_final_2, aes(x = factor(derived_sex))) +
+    geom_bar(color="black", fill="antiquewhite2")+
+  labs(title="sex distribution")
+ggplot(hmda_ca_final_2, aes(x = factor(applicant_age))) +
+    geom_bar(color="black", fill="bisque3")+
+  labs(title="age distribution")
+ggplot(hmda_ca_final_2, aes(x = factor(derived_ethnicity))) +
+    geom_bar(color="black", fill="cornsilk3")+
+  labs(title="etthnicity distribution")
+ggplot(hmda_ca_final_2, aes(x = factor(action_taken))) +
+    geom_bar(color="black", fill="azure3")+
+  labs(title="action_taken distribution")
 ```
-#data normalization 
+
+# Histograms and Box Plots for numerical variables
 ```{r}
-
+hist(hmda_ca_final_2$interest_rate,col = "cornsilk3",main = "interest rate distribution")
+hist(hmda_ca_final_2$loan_amount,col = "cornsilk3",main = "loan amount distribution")
+hist(hmda_ca_final_2$income,col = "cornsilk3",main = "income distribution")
+hist(hmda_ca_final_2$property_value,col = "cornsilk3",main = "property value distribution")
 ```
-
 Loan amount distribution does not appear to be normal (mean is greater than the median).
-
+#data normalizationL:log transformation
+```{r}
+nor.income <- log10(hmda_ca_final_2$income)
+hist(nor.income,col = "cornsilk3",main = "income distribution")
+nor.provalue <- log10(hmda_ca_final_2$property_value)
+hist(nor.provalue,col = "cornsilk3",main = "property value distribution")
+nor.intrate <- log10(hmda_ca_final_2$interest_rate)
+hist(nor.intrate,col = "cornsilk3",main = "interest rate distribution")
+nor.loanamount <- log10(hmda_ca_final_2$loan_amount)
+hist(nor.loanamount,col = "cornsilk3",main = "loan amount distribution")
+```
 #scatter plot
 ```{r}
 rate_income.plot <- plot(hmda_ca_final_2$interest_rate ~ hmda_ca_final_2$income, pch = 19, col = "black")
