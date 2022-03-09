@@ -113,7 +113,11 @@ Our Github repository address is:https://github.com/brandonchin19/Team3/.
 ### Load in dataset
 
 ```{r}
+<<<<<<< Updated upstream
 hmda <- data.frame(read.csv("2019_lar.csv"))
+=======
+hmda<-read.csv("2019_lar.csv")
+>>>>>>> Stashed changes
 str(hmda)
 
 ```
@@ -185,7 +189,11 @@ hmda_ca_final_1 = hmda_ca_final
 hmda_ca_final_1$derived_ethnicity = factor(hmda_ca_final$derived_ethnicity)
 hmda_ca_final_1$derived_race = factor(hmda_ca_final$derived_race)
 hmda_ca_final_1$derived_sex = factor(hmda_ca_final$derived_sex)
+<<<<<<< Updated upstream
 hmda_ca_final_1$action_taken = as.numeric(hmda_ca_final$action_taken)
+=======
+#hmda_ca_final_1$action_taken = factor(hmda_ca_final$action_taken)
+>>>>>>> Stashed changes
 hmda_ca_final_1$loan_amount = as.numeric(hmda_ca_final$loan_amount)
 hmda_ca_final_1$interest_rate = as.numeric(hmda_ca_final$interest_rate)
 hmda_ca_final_1$property_value = as.numeric(hmda_ca_final$property_value)
@@ -369,6 +377,11 @@ str(loans)
 #Creating new subset of loans data called loans_all_num which holds all numeric columns from loan dataset
 
 ```{r}
+<<<<<<< Updated upstream
+=======
+loans_all_num<-loans[4:11]
+str(loans_all_num)
+>>>>>>> Stashed changes
 
 
 loans_all_num<-loans[c(5:11)]
