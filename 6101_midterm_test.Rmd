@@ -1,7 +1,7 @@
 ---
 title: "DATS 6101 Midterm"
 authors: "Brandon Chin, Paul Kelly, Ksenia Shadrina, Luke Wu"
-date: "2/16/22"
+date: "3/5/22"
 # date: "`r Sys.Date()`"
 output:
   html_document:
@@ -19,6 +19,7 @@ output:
 # some of common options (and the defaults) are: 
 # include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
 library(ezids)
+library(tidyverse)
 # knitr::opts_chunk$set(warning = F, results = "markup", message = F)
 knitr::opts_chunk$set(warning = F, results = "show", message = F)
 options(scientific=T, digits = 3) 
@@ -114,6 +115,7 @@ Our Github repository address is:https://github.com/brandonchin19/Team3/.
 ```{r}
 hmda <- data.frame(read.csv("2019_lar.csv"))
 str(hmda)
+
 ```
 
 # Check number of rows
@@ -130,7 +132,8 @@ xkabledplyhead(hmda,5)
 xkabledplytail(hmda,5)
 ```
 
-# Subsetting to California Only
+
+# Subsetting to California Only & renaming some of the variables
 
 ```{r}
 hmda_ca <- subset(hmda,state_code=="CA")
@@ -142,6 +145,128 @@ str(hmda_ca)
 ```{r}
 hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
 str(hmda_ca)
+rename(hmda_ca, msa = derived_msa_md, ethnicity=derived_ethnicity, race=derived_race,
+       sex=derived_sex)
+```
+
+# Subsetting to California Only; non-business properties; principal residences only
+
+```{r}
+hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
+str(hmda_ca)
+
+```
+
+#Subsetting principal residences only; tail and head check to make sure that the geography is widespread/our sample is "random"; 48 unique counties (if there's time, check if geographically clustered)
+
+```{r}
+hmda_ca <- subset(hmda_ca,occupancy_type=="1")
+dim(hmda_ca)
+xkabledplyhead(hmda_ca,5)
+xkabledplytail(hmda_ca,5)
+loadPkg("sqldf")
+names(hmda_ca)
+sqldf("select count(distinct(county_code)) from hmda_ca")
+```
+
+
+#Subsetting to only relevant actions: denial or approval
+
+```{r}
+hmda_ca1<-hmda_ca%>%filter(action_taken %in% c("1", "3"))
+hmda_ca<-hmda_ca1
+```
+
+# Subsetting to only relevant columns
+
+```{r}
+hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,50, 62,74,78)]
+str(hmda_ca_final)
+
+```
+
+
+# Changing vector types
+
+```{r}
+hmda_ca_final_1 = hmda_ca_final
+hmda_ca_final_1$derived_ethnicity = factor(hmda_ca_final$derived_ethnicity)
+hmda_ca_final_1$derived_race = factor(hmda_ca_final$derived_race)
+hmda_ca_final_1$derived_sex = factor(hmda_ca_final$derived_sex)
+hmda_ca_final_1$action_taken = as.numeric(hmda_ca_final$action_taken)
+hmda_ca_final_1$loan_amount = as.numeric(hmda_ca_final$loan_amount)
+hmda_ca_final_1$interest_rate = as.numeric(hmda_ca_final$interest_rate)
+hmda_ca_final_1$property_value = as.numeric(hmda_ca_final$property_value)
+hmda_ca_final_1$income = as.numeric(hmda_ca_final$income)
+hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
+str(hmda_ca_final_1)
+hmda_ca_final_1<-rename(hmda_ca_final_1, ethnicity=derived_ethnicity, race=derived_race,
+       sex=applicant_sex, age= applicant_age)
+names(hmda_ca_final_1)
+```
+
+# Histograms and Box Plots
+
+```{r}
+library(ggplot2)
+ggplot(hmda_ca_final_1,aes(x=loan_amount))+
+  geom_histogram(color="black", fill="purple")+
+  labs(title="Histogram of Loan Amount", x="Loan Amount in dollars", y="Frequency")
+```
+
+Loan amount distribution does not appear to be normal (mean is greater than the median).
+
+```{r}
+library(ggplot2)
+ggplot(hmda_ca_final_1,aes(x=interest_rate))+
+  geom_histogram(color="black", fill="pink")+
+  labs(title="Histogram of Interest Rates", x="Interest Rates", y="Frequency")
+```
+
+Interest rate distribution does not appear to be normal (mean is greater than the median).
+
+
+```{r}
+ggplot(hmda_ca,aes(y=income))+
+  geom_boxplot(color="black", fill="green")+
+  labs(title="Boxplot of Incomes", y="Income in dollars", x="Frequency")
+```
+
+
+```{r}
+ggplot(hmda_ca_final_1,aes(y=property_value))+
+  geom_boxplot(color="black", fill="blue")+
+  labs(title="Boxplot of Property Values", y="Property Values in dollars", x="Frequency")
+```
+
+```{r}
+library(ggplot2)
+qplot(data = hmda_ca_final_1,
+      x = loan_amount,
+      y = race,
+      color = action_taken,
+      main="Loan amount and Race by Action taken")
+```
+
+Loan amounts and loan originations are higher for white borrowers; loan amounts for other races are lower, and loan rejection rates are higher particularly for Black or African American Borrowers. The lower the loan amount, the higher the likelihood of the loan being rejected?
+
+# Exploring columns that appear to have lots of NAs
+
+```{r}
+summary(hmda_ca_final_1$interest_rate)
+```
+
+
+```{r}
+summary(hmda_ca_final_1$property_value)
+```
+
+```{r}
+summary(hmda_ca_final_1$income)
+```
+
+```{r}
+summary(hmda_ca_final_1$loan_amount)
 ```
 
 
@@ -157,11 +282,28 @@ cha_cols <- select_if(hmda_ca, is.character)
 cha_cols
 summary(cha_cols)
 ```
+
 #View numerical variables 
+
 ```{r}
 num_cols <- select_if(hmda_ca, is.numeric)
 num_cols
 summary(num_cols)
+
+
+qqnorm(hmda_ca_final_1$interest_rate,
+       main="QQ Plot of Interest Rates",
+       ylab="Interest Rate",
+       col="pink")
+qqline(hmda_ca_final_1$interest_rate)
+```
+
+```{r}
+qqnorm(hmda_ca_final_1$property_value,
+       main="QQ Plot of Property Values",
+       ylab="Property Value",
+       col="blue")
+qqline(hmda_ca_final_1$property_value)
 ```
 # Subsetting to only relevant columns
 
@@ -192,7 +334,15 @@ missvalue <- is.na(hmda_ca_final_1)
 summary(missvalue)
 ```
 
+qqnorm(hmda_ca_final_1$income,
+       main="QQ Plot of Income",
+       ylab="Income",
+       col="green")
+qqline(hmda_ca_final_1$income)
+```
+
 # remove/replace missing value
+
 ```{r}
 loadPkg("tidyverse")
 hmda_ca_final_2 <- hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda_ca_final_1$interest_rate, na.rm = TRUE)
@@ -201,8 +351,23 @@ hmda_ca_final_2 <- hmda_ca_final_1 %>% drop_na(property_value)
 hmda_ca_final_2 <- na.omit(hmda_ca_final_1, cols="income")
 missvalue1 <- is.na(hmda_ca_final_2)
 summary(missvalue1)
+
+qqnorm(hmda_ca_final_1$loan_amount,
+       main="QQ Plot of Loan Amount",
+       ylab="Loan Amount",
+       col="purple")
+qqline(hmda_ca_final_1$loan_amount)
+```
+
+# Removing outliers from interest_rate, property value, income, and loan amount
+
+Can we approach more normalized distributions in loan amount, interest rates, income, and property value by removing outliers?
+
+```{r}
+hmda_ca_final_no_outliers_1 <- outlierKD2(hmda_ca_final_1,interest_rate)
 ```
 #checking outliers 
+
 ```{r}
 boxplot(hmda_ca_final_2$interest_rate)
 boxplot(hmda_ca_final_2$loan_amount)
@@ -211,6 +376,7 @@ boxplot(hmda_ca_final_2$income)
 
 ```
 #descripitve analysis
+
 ```{r}
 
 Numerical_var <- subset(hmda_ca_final_2,select=c(loan_amount, income, property_value))
@@ -220,6 +386,7 @@ var(hmda_ca_final_2$income)
 var(hmda_ca_final_2$property_value)
 ```
 # Histograms and Box Plots for categorical variables 
+
 ```{r}
 library(ggplot2)
 ggplot(hmda_ca_final_2, aes(x = factor(derived_sex))) +
@@ -234,17 +401,28 @@ ggplot(hmda_ca_final_2, aes(x = factor(derived_ethnicity))) +
 ggplot(hmda_ca_final_2, aes(x = factor(action_taken))) +
     geom_bar(color="black", fill="azure3")+
   labs(title="action_taken distribution")
+
+
+```{r}
+hmda_ca_final_no_outliers_2 <- outlierKD2(hmda_ca_final_no_outliers_1,property_value)
+```
+
+```{r}
+hmda_ca_final_no_outliers_3 <- outlierKD2(hmda_ca_final_no_outliers_2,income)
 ```
 
 # Histograms and Box Plots for numerical variables
+
 ```{r}
 hist(hmda_ca_final_2$interest_rate,col = "cornsilk3",main = "interest rate distribution")
 hist(hmda_ca_final_2$loan_amount,col = "cornsilk3",main = "loan amount distribution")
 hist(hmda_ca_final_2$income,col = "cornsilk3",main = "income distribution")
 hist(hmda_ca_final_2$property_value,col = "cornsilk3",main = "property value distribution")
+loans <- outlierKD2(hmda_ca_final_no_outliers_3,loan_amount)
 ```
 Loan amount distribution does not appear to be normal (mean is greater than the median).
 #data normalizationL:log transformation
+
 ```{r}
 nor.income <- log10(hmda_ca_final_2$income)
 hist(nor.income,col = "cornsilk3",main = "income distribution")
@@ -255,13 +433,14 @@ hist(nor.intrate,col = "cornsilk3",main = "interest rate distribution")
 nor.loanamount <- log10(hmda_ca_final_2$loan_amount)
 hist(nor.loanamount,col = "cornsilk3",main = "loan amount distribution")
 ```
+
 #scatter plot
+
 ```{r}
 rate_income.plot <- plot(hmda_ca_final_2$interest_rate ~ hmda_ca_final_2$income, pch = 19, col = "black")
 loan_value.plot <- plot(hmda_ca_final_2$loan_amount ~ hmda_ca_final_2$property_value, pch = 19, col = "black")
 rate_loan <- plot(hmda_ca_final_2$interest_rate ~ hmda_ca_final_2$loan_amount, pch = 19, col = "black")
 value_income <- plot(hmda_ca_final_2$property_value ~ hmda_ca_final_2$income, pch = 19, col = "black")
-
 ```
 
 ```{r}
@@ -278,9 +457,145 @@ Interest rate distribution does not appear to be normal (mean is greater than th
 ggplot(hmda_ca,aes(y=income))+
   geom_boxplot(color="black", fill="green")+
   labs(title="Boxplot of Incomes", y="Income in dollars", x="Frequency")
+
+```{r}
+qqnorm(loans$interest_rate,
+       main="QQ Plot of Interest Rates",
+       ylab="Interest Rate",
+       col="pink")
+qqline(loans$interest_rate)
+```
+
+```{r}
+qqnorm(loans$property_value,
+       main="QQ Plot of Property Values",
+       ylab="Property Value",
+       col="blue")
+qqline(loans$property_value)
+```
+
+```{r}
+qqnorm(loans$income,
+       main="QQ Plot of Income",
+       ylab="Income",
+       col="green")
+qqline(loans$income)
+```
+
+```{r}
+qqnorm(loans$loan_amount,
+       main="QQ Plot of Loan Amount",
+       ylab="Loan Amount",
+       col="purple")
+qqline(loans$loan_amount)
+```
+
+With outliers removed, the numerical values are more normally distributed and better suited for analysis.
+
+```{r}
+library(lattice)
+library(ggplot2)
+pairs(loans)
+```
+
+```{r}
+str(loans)
+```
+
+# Correlation plot using numeric/integer values
+#Creating new subset of loans data called loans_all_num which holds all numeric columns from loan dataset
+
+```{r}
+loans_all_num<-loans[5:11]
+str(loans_all_num)
+```
+
+#Creating a correlation matrix table from loans_all_num and named it cor_loans
+#Printed table of cor_loans
+#Printed corplot of cor_loans
+
+loans_all_num<-loans[c(5:11)]
+
+str(loans_all_num)
+```
+#Creating a correlation matrix table from loans_all_num and named it cor_loans
+#Printed table of cor_loans
+#Printed corplot of cor_loans
+
+#Question KS: is it possible to add action taken here?
+
+```{r}
+
+cor_loans<-cor(loans_all_num, use="complete.obs")
+xkabledply(cor_loans)
+
+loadPkg("corrplot")
+corrplot(cor_loans)
+
+#Question for the presentation: are approvals and denials independent of applicant's gender, race, age, and ethnicity?
+
+#Chi-square tests/create a new variable action in order to perform the tests
+
+``` {r}
+unique(loans$action_taken)
+loans$action<-recode(loans$action_taken, "3"="Denied", 
+                           "1"="Approved")
+unique(loans$action)
+```
+Chi-Square test is that no relationship exists on the categorical variables in the population
+
+
+#Chi-Square Test for Loan Approval and Race: result=>reject the null of independence (there is an issue with results because, I think, some groups are underrepresented)
+
+``` {r}
+contable1 = table(loans$race, loans$action)
+xkabledply(contable1, title="Contingency table for Loan Approval and Race")
+
+chitest1 = chisq.test(contable1)
+chitest1
+```
+
+#Chi-Square Test for Loan Approval and Sex: result=>reject the null of independence
+```{r}
+
+contable2 = table(loans$sex, loans$action)
+xkabledply(contable2, title="Contingency table for Loan Approval and Sex")
+
+chitest2 = chisq.test(contable2)
+chitest2
+```
+
+```{r}
+contable3 = table(loans$ethnicity, loans$action)
+xkabledply(contable3, title="Contingency table for Loan Approval and Ethnicity")
+chitest3 = chisq.test(contable3)
+chitest3
+```
+
+#Chi-Square Test for Loan Approval and Race: result=>reject the null of independence (there is an issue with results because, I think, some groups are underrepresented); look into how to fix this
+
+``` {r}
+contable4 = table(loans$age, loans$action)
+xkabledply(contable4, title="Contingency table for Loan Approval and Age")
+
+chitest4 = chisq.test(contable4)
+chitest4
+```
+
+#Create a new binary variable called "actionb"; 1=Denied; 0=Approved because we are interested in denials for our question
+
+``` {r}
+loans$actionb<-recode(loans$action_taken, "3"="1", 
+                           "1"="0")
+loans$actionb<-as.factor(loans$actionb)
+str(loans)
+unique(loans$actionb)
+View(loans)
+names(loans)
 ```
 
 
+#Start the logistic regression modeling: "probability of getting denied"
 ```{r}
 ggplot(hmda_ca_final_1,aes(y=property_value))+
   geom_boxplot(color="black", fill="blue")+
@@ -407,3 +722,7 @@ qqline(loans$loan_amount)
 ```
 
 With outliers removed, the numerical values are more normally distributed and better suited for analysis.
+library(ISLR)
+m1<-glm(actionb~income, family = binomial(link = "logit"), data=loans )
+summary(m1)
+```
