@@ -1,0 +1,497 @@
+---
+title: "Summary Report for Part I: Mortgage Lending Practices in California"
+authors: "Brandon Chin, Paul Kelly, Ksenia Shadrina, Luke Wu"
+date: "3/23/22"
+# date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+library(ezids)
+library(tidyverse)
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+```{r modify_outlierKD2}
+#' Original outlierKD function by By Klodian Dhana,
+#' https://www.r-bloggers.com/identify-describe-plot-and-remove-the-outliers-from-the-dataset/
+#' Modified to have third argument for removing outliers instead of interactive prompt,
+#' and after removing outlier, original df will not be changed. The function returns the a df,
+#' which can be saved as original df name if desired.
+#' Also added QQ-plot in the output, with options to show/hide boxplot, histogram, qqplot.
+#' Check outliers, and option to remove them, save as a new dataframe.
+#' @param df The dataframe.
+#' @param var The variable in the dataframe to be checked for outliers
+#' @param rm Boolean. Whether to remove outliers or not.
+#' @param boxplt Boolean. Whether to show the boxplot, before and after outliers removed.
+#' @param histogram Boolean. Whether to show the histogram, before and after outliers removed.
+#' @param qqplt Boolean. Whether to show the qqplot, before and after outliers removed.
+#' @return The dataframe with outliers replaced by NA if rm==TRUE, or df if nothing changed
+#' @examples
+#'   outlierKD2(mydf, height, FALSE, TRUE, TRUE, TRUE)
+#'   mydf = outlierKD2(mydf, height, TRUE, TRUE, TRUE, TRUE)
+#'   mydfnew = outlierKD2(mydf, height, TRUE)
+#' @export
+outlierKD2 <- function(df, var, rm=TRUE, boxplt=TRUE, histogram=TRUE, qqplt=TRUE) {
+  dt = df # duplicate the dataframe for potential alteration
+  var_name <- eval(substitute(var),eval(dt))
+  na1 <- sum(is.na(var_name))
+  m1 <- mean(var_name, na.rm = T)
+  colTotal <- boxplt+histogram+qqplt
+  par(mfrow=c(2, max(2,colTotal)), oma=c(0,0,3,0)) # fixed issue with only 0 or 1 chart selected
+  if (qqplt) {
+    qqnorm(var_name, main = "With outliers")
+    qqline(var_name)
+  }
+  if (histogram) { hist(var_name, main="With outliers", xlab=NA, ylab=NA) }
+  if (boxplt) { boxplot(var_name, main="With outliers") }
+
+  outlier <- boxplot.stats(var_name)$out
+  mo <- mean(outlier)
+  var_name <- ifelse(var_name %in% outlier, NA, var_name)
+  if (qqplt) {
+    qqnorm(var_name, main = "Without outliers")
+    qqline(var_name)
+  }
+  if (histogram) { hist(var_name, main="Without outliers", xlab=NA, ylab=NA) }
+  if (boxplt) { boxplot(var_name, main="Without outliers") }
+  
+  if(colTotal > 0) {  # if no charts are wanted, skip this section
+    title("Outlier Check", outer=TRUE)
+    na2 <- sum(is.na(var_name))
+    cat("Outliers identified:", na2 - na1, "\n")
+    cat("Propotion (%) of outliers:", round((na2 - na1) / sum(!is.na(var_name))*100, 1), "\n")
+    cat("Mean of the outliers:", round(mo, 2), "\n")
+    m2 <- mean(var_name, na.rm = T)
+    cat("Mean without removing outliers:", round(m1, 2), "\n")
+    cat("Mean if we remove outliers:", round(m2, 2), "\n")
+  }
+
+  # response <- readline(prompt="Do you want to remove outliers and to replace with NA? [yes/no]: ")
+  # if(response == "y" | response == "yes"){
+  if(rm){
+      dt[as.character(substitute(var))] <- invisible(var_name)
+      #assign(as.character(as.list(match.call())$dt), dt, envir = .GlobalEnv)
+      cat("Outliers successfully removed", "\n")
+      return(invisible(dt))
+  } else {
+      cat("Nothing changed", "\n")
+      return(invisible(df))
+  }
+}
+
+```
+
+### I. Introduction
+
+There is considerable evidence indicating historical discriminatory lending practices throughout the United States. (Steil et al.: 2018) To explore whether and for which groups discrimination in lending occurs, the research has thus far focused on differences in the final cost of loans (Bayer, Ferreira, and Ross: 2014) or denial of loan applications (Park: 2022) across categories of race, ethncity and gender, while controlling for key factors like credit scores and debt to income ratios. Studies also reveal the longstanding geographic patterns of discrimination in mortgage lending continue to persist today (Namin et al.: 2022). 
+
+In our research, we build on the existing body of work by examining lending practices in California in 2019. We focus on California in part due to a very large number of observations in the Federal Financial Institutions Examination Council’s (FFIEC) Home Mortgage Disclosure Act (HMDA) dataset. In addition, the housing market in California presents an interesting case study due to its large and increasingly diverse population (Public Policy Institute: 2022) and dynamic economy. By analyzing the data from 2019, we hope to get the most recent glimpse at the lending practices before the onset of the economic crisis induced by the COVID-19 pandemic. While the dataset is very detailed and presents an opportunity for rigorous research, we must narrow the scope of the analysis given the time constraints. Thus, we formulate the following SMART question: 
+
+
+“Which factors drove denials for mortgages in California in 2019?”
+
+To answer the question, we randomly subset the unsorted data to the first ten thousand rows, filtered on California, leaving us with 5,441 observations representing 48 counties out of 58 counties in California. We then conduct various exploratory data analysis exercises, described in detail in the report, and correlation and chi-square tests. We then lay out the next steps for furthering the analysis by building a logistic regression. 
+
+### II. Brief Literature Review
+
+A number of recent studies have examined factors associated with either mortgage denial rates or cost of loans. The literature reviewed within the scope of our research suggested evidence of disparities in mortgage lending practices across race, ethnicity, age, and gender.
+
+Bayer, Ferreira, and Ross (2014) examine lending practices in seven large metropolitan areas, including Los-Angeles CA CMSA and San Francisco, CA between 2004 and 2008 using HMDA data- the same dataset as we employ in our study. The authors find that the incidence of high cost loans is higher for African American and Hispanic borrowers even after controlling for key mortgage risk factors such as borrower credit score. 
+
+In examining differences in the share of applications denied by lenders, similar to our focus, Park (2022) addresses the possible omitted variable bias driven by previously missing data in earlier studies by estimating expected risk with a detailed set of underwriting characteristics available in newly available HMDA and Federal Housing Administration (FHA) data between 2010 and 2019.  The author finds evidence of disparities in denials rates across race, ethnicity, and gender that “cannot be fully explained by differences in default risk.” 
+
+A recent study by the Urban Institute (2021) examined the relationship between mortgage denial rates and age, also using the HMDA data. The authors find that older applicants are indeed more likely to be denied than younger applicants. The authors also find that household financial characteristics are likely contributing to denial rates higher for older homeowners. Using data from the Federal reserve, the authors note that the share of individuals ages older and 65 that have debt is substantially higher than 20 years ago. 
+
+### III. Data and Limitations
+
+Our data is sourced from the Federal Financial Institutions Examination Council’s (FFIEC) Home Mortgage Disclosure Act (HMDA) website, where mortgage application datasets from 2017 through the present day are publicly available. The modified Loan/Application Register (LAR) for 2019 (to which it is referred by the Consumer Financial Protection Bureau), provides “loan-level data for an individual financial institution, as modified by the Bureau to protect applicant and borrower privacy,” (which is to say the data is anonymized) and covers loans from the period of January 2019 to December 2019, across the entire United States.
+
+The dataset contains 99 variables and 17,560,643 observations and is packaged as a single 6.84 GB pipe-delimited text file. Although the scope of the dataset might be advantageous for conducting a large scale data analysis, for a more targeted exercise such as this, its volume presents some unique challenges. To perform any kind of exploratory data analysis, it stands to reason that one must first load the data into software, and the act of doing this with the file as presented is not only computationally intensive but beyond the capabilities of typical consumer laptops, including those owned by our team. To that end, we decided that data be brought into R Studio in batches of 10,000 rows. Due to time constraints, however, the first batch load became the de-facto dataset upon which this study is based. This is an acknowledged limitation of this project.
+
+The resulting factors that may impact statistical analysis results are: firstly, the first 10,000 rows represent the first 10,000 loan applications ordered by date of action taken (i.e. no re-ordering was performed on the data), and we do not control for why loan applications were submitted at certain times; and secondly, the batch is heavily geographically weighted to loans in the state of California. Due to this geographic skew (5,441 observations out of 10,000 - more than 50%), we decided to focus our efforts on exclusively examining loans in California in an attempt to transform this limitation into a strength.
+
+As previously mentioned, the LAR data contains 99 variables, many of which are extraneous to the goals of this study. The variables utilized in this study are:  
+  1. devived_ethnicity  
+    •    Description: Single aggregated ethnicity categorization derived from applicant/borrower and co/applicant/co-borrower ethnicity fields  
+    ⁃    Values: Hispanic or Latino; Not Hispanic or Latino; Joint; Ethnicity Not Available; Free Form Text Only  
+  2. derived_race  
+    •    Description: Single aggregated race categorization derived from applicant/borrower and co/applicant/co-borrower race fields  
+    ⁃    Values: American Indian or Alaska Native; Asian; Black or African American; Native Hawaiian or Other Pacific Islander; White; 2 or more minority races; Joint; Free Form Text Only; Race Not Available  
+  3. derived_sex  
+    •    Description: Single aggregated sex categorization derived from applicant/borrower and co/applicant/co-borrower sex fields  
+    ⁃    Values: Male; Female; Joint; Sex Not Available  
+  4. action_taken  
+    •    Description: The action taken on the covered loan or application  
+    ⁃    Values: 1 - Loan originated; 2 - Application approved but not accepted; 3 - Application denied; 4 - Application withdrawn by applicant; 5 - File closed for incompleteness; 6 - Purchased loan; 7 - Preapproval request denied; Preapproval request approved but not accepted  
+  5. loan_amount  
+    •    Description: The amount of the covered loan, or the amount applied for  
+    ⁃    Values: varying values  
+  6. interest_rate  
+    •    The interest rate for the covered loan or application  
+    ⁃    Values: Varying values  
+  7. property_value  
+    •    Description: The value of the property securing the covered loan or, in the case of an application, proposed to secure the covered loan, relied on in making the credit decision  
+    ⁃    Values: Varying values, rounded to the midpoint of the nearest $10,000 interval for which the reported value falls  
+  8. income  
+    •    Description: The gross annual income, in thousands of dollars, relied on in making the credit decision, or if a credit decision was not made, the gross annual income relied on in processing the application  
+    ⁃    Values: Varying values  
+  9. applicant_age  
+    •    Description: The age, in years, of the applicant or borrower  
+    ⁃    Varying values; Ages binned are: 25-34; 35-44; 45-54; 55-64; 65-74  
+  10. applicant_ethnicity-1  
+    •    Description: Ethnicity of the applicant or borrower  
+    ⁃    Values: 1 - Hispanic or Latino; 11 - Mexican; 12 - Puerto Rican; 13 - Cuban; 14 - Other Hispanic or Latino; 2 - Not Hispanic or Latino; 3 - Information not provided by applicant in mail, internet, or telephone application; 4 - Not applicable  
+  11. applicant_race-1  
+    •    Description: Race of the applicant or borrower  
+    ⁃    Values: 1 - American Indian or Alaska Native; 2 - Asian; 21 - Asian Indian; 22 - Chinese; 23 - Filipino; 24 - Japanese; 25 - Korean; 26 - Vietnamese; 27 - Other Asian; 3 - Black or African American; 4 - Native Hawaiian or Other Pacific Islander; 41 - Native Hawaiian; 42 - Guamanian or Chamorro; 43 - Samoan; 44 - Other Pacific Islander; 5 - White; 6 - Information not provided by applicant in mail, internet, or telephone application; 7 - Not applicable  
+  12. applicant_sex  
+    •    Description: Sex of the applicant or borrower  
+    ⁃    Values: 1 - Male; 2 - Female; 3 - Information not provided by applicant in mail, internet, or telephone application; 4 - Not applicable; 6 - Applicant selected both male and female  
+    
+To prepare these fields for statistical analysis, four were converted to factors (derived_ethnicity, derived_race, derived_sex, and applicant_age), and four were converted to integers (loan_amount, interest_rate, property_value, and income). Although applicant_ethnicity_1, applicant_race_1, and applicant_sex convey largely the same information as derived_ethnicity, derived_race, and derived_sex, they are numbers and not factors and were thus included for eventual correlation plot construction. The final preparatory step before exploratory data analysis was filtering our dataset by action_taken (either “1” or “3”) to focus solely on loan applications that were either approved or denied, reducing our dataset from 5,441 observations to 3,974 observations.
+
+```{r, include=FALSE}
+hmda <- read.csv("2019_lar.csv")
+dim(hmda)
+```
+
+
+```{r, include=FALSE}
+hmda_ca <- subset(hmda,state_code=="CA")
+dim(hmda_ca) #5441, 99
+```
+
+
+```{r, include=FALSE}
+hmda_ca1 <- subset(hmda_ca,business_or_commercial_purpose=="2")
+
+rename(hmda_ca1, msa = derived_msa_md, ethnicity=derived_ethnicity, race=derived_race,
+       sex=derived_sex)
+dim(hmda_ca1) #5196 , 99
+```
+
+
+```{r, include=FALSE}
+hmda_ca2<-hmda_ca1%>%filter(action_taken %in% c("1", "3"))
+hmda_ca <- subset(hmda_ca2,occupancy_type=="1")
+dim(hmda_ca) #3974   99
+```
+
+### VI. Exploratory Data Analysis
+
+After formulating the SMART question, certain variables were no longer pertinent to our question, such as Lei, denial_reason. Some variables had constant values, such as activity_year, and some of variables had over 60% missing values, such as prepayment_penalty_term. Considering all the aforementioned reasons, we scaled down our dataset to 12 variables directly pertinent to our SMART question: devived_ethnicity, derived_race, derived_sex, action_taken, loan_amount, interest_rate, property_value, income, applicant_age, applicant_ethnicity-1, applicant_race-1, applicant_sex.
+
+```{r, include=FALSE}
+hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,50,62,74,78)]
+str(hmda_ca_final)
+```
+
+The next step was to address the missing values in the resulting subset. We found there were 501 missing values in interest_rate, 118 missing values in income, and 3 missing values in applicant_ethnicity_1. Based on the summary results of the variables that contain missing values, we replaced the missing values with the mean for interest_rate because the variance won’t have significant change and dropped the missing values for income and applicant_ethnicity_1 because the portion of missing value is small. After addressing the missing values, we obtained 3,853 clean observations and they are for further analysis, such as outlier check.
+
+
+```{r, include=FALSE}
+hmda_ca_final_1 = hmda_ca_final
+hmda_ca_final_1$derived_ethnicity = factor(hmda_ca_final$derived_ethnicity)
+hmda_ca_final_1$derived_race = factor(hmda_ca_final$derived_race)
+hmda_ca_final_1$derived_sex = factor(hmda_ca_final$derived_sex)
+#hmda_ca_final_1$action_taken = factor(hmda_ca_final$action_taken)
+hmda_ca_final_1$loan_amount = as.numeric(hmda_ca_final$loan_amount)
+hmda_ca_final_1$interest_rate = as.numeric(hmda_ca_final$interest_rate)
+hmda_ca_final_1$property_value = as.numeric(hmda_ca_final$property_value)
+hmda_ca_final_1$income = as.numeric(hmda_ca_final$income)
+hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
+str(hmda_ca_final_1)
+```
+
+```{r, include=FALSE}
+missvalue <- is.na(hmda_ca_final_1)
+summary(missvalue)
+#applicant_ethnicity_1 has 3 missing values; income has 118 missing values; interest rate has 501; categorical variables do not have any missing values; number of observations without any missing values is 3853.
+```
+
+
+```{r, include=FALSE}
+hmda_ca_final_2 <- hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda_ca_final_1$interest_rate, na.rm = TRUE)
+hmda_ca_final_2 <- hmda_ca_final_1 %>% drop_na(applicant_ethnicity_1)
+hmda_ca_final_2 <- na.omit(hmda_ca_final_1, cols="income")
+missvalue1 <- is.na(hmda_ca_final_2)
+summary(missvalue1)
+```
+
+We then proceeded to inspecting our categorical data. The visual inspection of the histograms (Graph 1-4) below indicates that most of the applicants are male or as a joint which includes male applicants, while the majority of age group of applicants are 25-34, 35-44, 45-54. As for devived_ethnicity, large number of applicants come from either Hispanic/Latino or not Hispanic/Latino, and we received same information from applicant_ethnicity_1. As with the action_taken histogram shown, most of the action taken is "1" which means "loan originated". In applicant_race_1 histogram, white borrowers obviously become the majority.
+
+```{r, include=TRUE}
+library(ggplot2)
+ggplot(hmda_ca_final_2, aes(x = factor(derived_sex))) +
+    geom_bar(color="black", fill="antiquewhite2")+
+  labs(title="Graph 1. Applicant sex distribution")
+ggplot(hmda_ca_final_2, aes(x = factor(applicant_age))) +
+    geom_bar(color="black", fill="bisque3")+
+  labs(title="Graph 2. Applicant age distribution")
+ggplot(hmda_ca_final_2, aes(x = factor(derived_ethnicity))) +
+    geom_bar(color="black", fill="cornsilk3")+
+  labs(title="Graph 3. Applicant ethnicity distribution")
+ggplot(hmda_ca_final_2, aes(x = factor(action_taken))) +
+    geom_bar(color="black", fill="azure3")+
+  labs(title="Graph 4. Action taken distribution")
+ggplot(hmda_ca_final_2, aes(x = factor(derived_race))) +
+    geom_bar(color="black", fill="azure3")+
+  labs(title="Graph 5. Derived Race")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+#ggplot(hmda_ca_final_2, aes(x = factor(applicant_ethnicity_1))) +
+    #geom_bar(color="black", fill="azure3")+
+  #labs(title="Graph 6. Applicant Ethnicity")
+
+```
+
+Next, we proceeded to exploring the numerical data for normality and outliers. Graphs 8-10 indicate that none of the numerical variables are normally distributed.
+
+```{r, include=TRUE}
+ggplot(hmda_ca_final_2,aes(x=loan_amount))+
+  geom_histogram(color="black", fill="steelblue")+
+  labs(title=" Graph 6. Histogram of Loan Amount", x="Loan Amount in dollars", y="Frequency")
+ggplot(hmda_ca_final_2,aes(x=interest_rate))+
+  geom_histogram(color="black", fill="pink")+
+  labs(title="Graph 8. Histogram of Interest Rate", x="Interest Rates", y="Frequency")
+ggplot(hmda_ca_final_2,aes(x=income))+
+  geom_histogram(color="black", fill="azure3")+
+  labs(title="Graph 9. Histogram of Income", x="Income in dollars", y="Frequency")
+ggplot(hmda_ca_final_2,aes(x=property_value))+
+  geom_histogram(color="black", fill="lightblue")+
+  labs(title="Graph 10. Histogram of Property Values", x="Property Values in dollars", y="Frequency")
+```
+
+As another check, we inspect qqnorm plots and confirm that the distributions are not normal(Graph 11-14)
+
+```{r, include=TRUE}
+qqnorm(hmda_ca_final_2$interest_rate,
+       main="Graph 11. QQ Plot of Interest Rates",
+       ylab="Interest Rate",
+       col="pink")
+qqline(hmda_ca_final_2$interest_rate)
+
+qqnorm(hmda_ca_final_2$income,
+       main="Graph 13. QQ Plot of Income",
+       ylab="Income",
+       col="green")
+qqline(hmda_ca_final_2$income)
+
+qqnorm(hmda_ca_final_2$property_value,
+       main="Graph 12. QQ Plot of Property Values",
+       ylab="Property Value",
+       col="blue")
+qqline(hmda_ca_final_2$property_value)
+
+qqnorm(hmda_ca_final_2$loan_amount,
+       main="Graph 14.QQ Plot of Loan Amount",
+       ylab="Loan Amount",
+       col="purple")
+qqline(hmda_ca_final_1$loan_amount)
+```
+
+Next, we remove outliers and check for normality again.
+```{r, include=TRUE}
+hmda_ca_final_no_outliers_3 <- outlierKD2(hmda_ca_final_2,interest_rate)
+```
+
+```{r, include=TRUE}
+hmda_ca_final_no_outliers_4 <- outlierKD2(hmda_ca_final_no_outliers_3,property_value)
+```
+
+```{r, include=TRUE}
+hmda_ca_final_no_outliers_5 <- outlierKD2(hmda_ca_final_no_outliers_4,income)
+```
+
+```{r, include=TRUE}
+loans <- outlierKD2(hmda_ca_final_no_outliers_5,loan_amount)
+```
+
+We then reexamine the variables for normality after removing the outliers.
+
+```{r, include=TRUE}
+qqnorm(loans$interest_rate,
+       main="Graph 15. QQ Plot of Interest Rates",
+       ylab="Interest Rate",
+       col="pink")
+qqline(loans$interest_rate)
+```
+
+```{r, include=TRUE}
+qqnorm(loans$property_value,
+       main="Graph 16. QQ Plot of Property Values",
+       ylab="Property Value",
+       col="blue")
+qqline(loans$property_value)
+```
+
+```{r, include=TRUE}
+qqnorm(loans$income,
+       main="Graph 17.QQ Plot of Income",
+       ylab="Income",
+       col="green")
+qqline(loans$income)
+```
+
+```{r, include=TRUE}
+qqnorm(loans$loan_amount,
+       main="Graph 18. QQ Plot of Loan Amount",
+       ylab="Loan Amount",
+       col="purple")
+qqline(loans$loan_amount)
+
+```
+
+The descriptive summaries indicate that mean and median are close across all four variables, so the data are now fit for further analysis.
+```{r, include=TRUE}
+Numerical_var <- subset(loans,select=c(loan_amount, income, property_value, interest_rate))
+```
+```{r}
+library(kableExtra)
+summary_t<-kbl(summary(Numerical_var))%>%
+  kable_styling()
+summary_t
+
+var(hmda_ca_final_2$loan_amount)
+var(hmda_ca_final_2$income)
+var(hmda_ca_final_2$property_value)
+var(hmda_ca_final_2$interest_rate)
+sd(hmda_ca_final_2$income)
+sd(hmda_ca_final_2$property_value)
+sd(hmda_ca_final_2$loan_amount)
+sd(hmda_ca_final_2$interest_rate)
+```
+
+
+### VI. Tests and Results	
+
+  The first test we decided to run is a correlation matrix and plot, the reason for the correlation test is to see what variables would be highly correlated with our outcome variable which is action_taken. The first step taken towards the correlation matrix was looking at the distribution of the derived_race variable. Since derived_race had 8 different levels for the different races and we knew that White applicants would more than likely be the majority of this variable. We checked this assumption with a bar graph to visualize the distribution of the different levels of this variable using the tab1() function listed in the epiDisplay library. Our assumption was correct, this led to the extraction of each level of the derived_race variable that corresponded with a race other than White.
+
+
+```{r, include=TRUE}
+library(lattice)
+
+pairs(loans)
+#str(loans)
+
+library(epiDisplay)
+tab1(loans$derived_race, sort.group = "decreasing", cum.percent = TRUE)
+
+
+
+```
+
+
+```{r, include=FALSE}
+
+summary(loans$derived_race)
+loans$Black<- ifelse(loans$derived_race=="Black or African American", 1, 0)
+loans$AIAN<- ifelse(loans$derived_race=="American Indian or Alaska Native", 1, 0)
+loans$NHPI<- ifelse(loans$derived_race=="Native Hawaiian or Other Pacific Islander", 1, 0)
+loans$Asian<- ifelse(loans$derived_race=="Asian", 1, 0)
+loans$Joint<- ifelse(loans$derived_race=="Joint", 1, 0)
+loans$N_A<- ifelse(loans$derived_race=="Race Not Available", 1, 0)
+loans$two_or<- ifelse(loans$derived_race=="2 or more minority races", 1, 0)
+str(loans)
+
+```
+
+In order to analyze these different races, we created new variables to represent the race for any observation that has one of these races. This led to the creation of variables corresponding with races for African American as Black , American Indian & Alaskan Native as AIAN, Native Hawaiian & Pacific Islander as NHPI, Asian as Asian, Joint, Race not available as N_A and 2 or more minority races as two_or. In order to create these variables ifelse()  function was utilized giving us a new dataset with seven new variables created.
+In order to use the cor() and corplot() functions our variables had to be numeric then we pulled all the numeric variables from the current dataset. After this we used the cor() function only using complete observations and saved this correlation matrix into a dataset named cor_loans. Next we used the xkabledply() function to display our matrix. The result of this table was that variables loan_amount, property_value, applicant_age, Black, Asian and applicant_sex had some correlation with our dependent variable .The next step taken in the analysis was creating our correlation plot to visualize the correlation matrix which held the same results as the correlation matrix. 
+
+```{r, include=FALSE}
+loans_all_num<-loans[c(4:17)]
+loans_all_num$applicant_age =as.numeric(loans$applicant_age)
+#str(loans_all_num)
+```
+
+
+```{r}
+cor_loans<-cor(loans_all_num, use="complete.obs")
+xkabledply(cor_loans)
+loadPkg("corrplot")
+corrplot(cor_loans)
+
+```
+
+
+As shown above the variable with the most correlation to action_taken are loan amount with the highest rate of correlation at approximately 15% with a negative impact, property_value and applicant_age with around 12% with a positive impact, applicant_sex at approximately 8% with a positive impact, Black and Asain indicator variables with about a 5% with a positive impact.
+
+Next, we have conducted a series of chi-square tests to assess whether the categorical variables are independent. Of particular interest are the relationships between action taken and characteristics of loan applicants. Of three tests performed, only the test of independence between derived_sex and action taken calculated correctly. We reject the null hypothesis of independence in this test. 
+
+``` {r, results=TRUE}
+contable1 = table(loans$derived_race, loans$action_taken)
+xkabledply(contable1, title="Contingency table for Loan Approval and Race")
+chitest1 = chisq.test(contable1)
+chitest1
+```
+
+``` {r, results=TRUE}
+contable2 = table(loans$derived_sex, loans$action_taken)
+xkabledply(contable2, title="Contingency table for Loan Approval and Sex")
+chitest2 = chisq.test(contable2)
+chitest2
+```
+
+``` {r, results=TRUE}
+contable3 = table(loans$derived_ethnicity, loans$action_taken)
+xkabledply(contable3, title="Contingency table for Loan Approval and Ethnicity")
+chitest3 = chisq.test(contable3)
+chitest3
+```
+
+``` {r, results=TRUE}
+contable4 = table(loans$applicant_age, loans$action_taken)
+xkabledply(contable4, title="Contingency table for Loan Approval and Age")
+chitest4 = chisq.test(contable4)
+chitest4
+```
+
+### VI. Conclusion and next steps
+
+  Through understanding our data limitations, the team concluded to examine key variables that would help answer our SMART question. These variables are  devived_ethnicity, derived_race, derived_sex, action_taken, loan_amount, interest_rate, property_value, income, applicant_age, applicant_ethnicity_1, applicant_race-1 and applicant sex. These variables would ultimately help us to identify what factors drove denials for mortgage applications in California for 2019. As data exploration continued, we found that we had to clean missing values in order to fully grasp what our data distributions covayed. This data exploration exercise also led to understanding of the derived_race variable and its different levels and ultimate need for disaggregation of this variable into other bucketed variables for race in order to observe the true impact of race on our independent variable through correlation analysis. 
+	
+	The testing phase pointed to the team that the key variables with the highest significant values were loan_amount, property_value, applicant_age, Black, Asian and applicant_sex with loan_amount having the highest correlation and Black and Asian having the lowest correction for all variables shown in the correlation matrix with a somewhat significant correlation. For the chi-square tests, three out of four tests did not run correctly. In the case of derived_race, derived_ethnicity, and applicant_age, we will next bin these categories to create a balanced dataset before attempting to run the chi-square tests or the logistic regression. However, given that the test was significant for applicant_sex and action_taken, we know that applicant_sex variable is likely going to be important in our logistic regression model.
+	
+	
+	The next step for our analysis is to build our model and use these variables that we have shown to have correlations to analyze if there can be a model with a high R-squared using these variables and if this variables are statistically significant then what each dependent variable coefficient is observed to be. Through this data exploration and analysis, we have determined that we need to use a logistic regression in order to correctly model the categorical varibles in the data.
+
+### References
+
+Bayer, P.,  Ferreira, F., and Ross, S..( 2014). Race, Ethnicity and High-Cost Mortgage Lending.  NBER Working Paper No. 20762
+
+Namin, S., Zhou,Y., Xu, W.,  McGinley, E., Jankowski,C., Laud, P., & Beyer, K. (2022)Persistence of mortgage lending bias in the United States: 80 years after the Home Owners’ Loan Corporation security maps, Journal of Race, Ethnicity and the City, DOI: 10.1080/26884674.2021.2019568
+
+Park, K. A., (2022) A Comparison of Mortgage Denial and Default Rates by Race, Ethnicity, and Gender. Available at SSRN: https://ssrn.com/abstract=4030908 or http://dx.doi.org/10.2139/ssrn.4030908
+
+
+California's Population. Website title:Public Policy Institute of California
+URL:https://www.ppic.org/publication/californias-population/
+Date accessed:March 21, 2022
+
+
+Steil, J. P., Albright, L., Rugh, J. S., & Massey, D. S. (2018). The Social Structure of Mortgage Discrimination. Housing studies, 33(5), 759–776. https://doi.org/10.1080/02673037.2017.1390076
+
+
+Kaul, K., Zhu, L. (2021). Mortgage Denial Rates and Household Finances among Older Americans. The Urban Institute. Accessible at: https://www.urban.org/sites/default/files/publication/104965/mortgage-denial-rates-and-household-finances-among-older-americans.pdf
+
+
+### Data
+
+Loan/Application Records (LAR).  2019. Dynamic National Loan-Level Dataset. Home Mortgage Disclosure Act (HMDA). Accessible at: https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level-dataset/2019
+
