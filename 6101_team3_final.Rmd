@@ -1,7 +1,7 @@
 ---
-title: "DATS 6101 Midterm"
+title: "DATS 6101 Final Project"
 author: "Brandon Chin, Paul Kelly, Ksenia Shadrina, Luke Wu"
-date: "3/9/22"
+date: "4/11/22"
 # date: "`r Sys.Date()`"
 output:
   html_document:
