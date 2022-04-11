@@ -529,8 +529,8 @@ contable3= table(hmda_down$derived_sex, hmda_down$action_taken)
 xkabledply(contable3, title="Contingency table for Loan Approval and Gender")
 chitest3 = chisq.test(contable3)
 chitest3
-
 ```
+
 ```{r}
 contable4= table(hmda_down$applicant_age, hmda_down$action_taken)
 xkabledply(contable4, title="Contingency table for Loan Approval and Age")
@@ -539,21 +539,34 @@ chitest4
 
 ```
 
+#Full linear model for action_taken
+ 
+
+```{r}
+full_model <- lm(action_taken~., data = loans)
+summary(full_model)
+```
+
+#Removing specific race fields due to NAs, running model again
+
+```{r}
+loans_for_modelling <- loans[1:12]
+full_model_2 <- lm(action_taken~., data = loans_for_modelling)
+summary(full_model_2)
+```
+
+```{r}
+pcr.fit=pcr(action_taken~.,data=loans_for_modelling,scale=FALSE,validation ="CV")
+ezids::xkabledplyhead(loans_for_modelling)
+summary(pcr.fit)
+```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+```{r}
+action_taken_logit <- glm(action_taken ~ derived_ethnicity + derived_sex, data = loans, family = "binomial")
+summary(action_taken_logit)
+xkablevif(action_taken_logit)
+```
 
 #SideNotes on ANOVA Testing 
 These are some constructs of my ANOVA test I left them here just incase I need to revist them, these might not be perfect because I ran multiple different variants, I assume it will not be used ultimately and if we need too we can run chi-squared on the balanced dataset.
