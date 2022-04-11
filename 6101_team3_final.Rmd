@@ -519,7 +519,6 @@ contable2= table(hmda_down$derived_ethnicity, hmda_down$action_taken)
 xkabledply(contable2, title="Contingency table for Loan Approval and Ethnicity")
 chitest2 = chisq.test(contable2)
 chitest2
-
 ```
 
 
@@ -540,7 +539,7 @@ chitest4
 ```
 
 #Full linear model for action_taken
- 
+
 
 ```{r}
 full_model <- lm(action_taken~., data = loans)
@@ -563,9 +562,38 @@ summary(pcr.fit)
 
 
 ```{r}
-action_taken_logit <- glm(action_taken ~ derived_ethnicity + derived_sex, data = loans, family = "binomial")
-summary(action_taken_logit)
-xkablevif(action_taken_logit)
+str(loans_for_modelling)
+```
+
+#changing action_taken to factor for modelling purposes 
+
+#```{r}
+#loans_for_modelling = loans_for_modelling
+#loans_for_modelling$action_taken = #factor(loans_for_modelling$action_taken)
+#```
+
+
+```{r}
+action_taken_fit1 <- lm(action_taken ~ derived_race, data = loans_for_modelling, family = "binomial")
+summary(action_taken_fit1)
+xkablevif(action_taken_fit1)
+```
+
+```{r}
+action_taken_fit2 <- lm(action_taken ~ derived_race + derived_ethnicity, data = loans_for_modelling, family = "binomial")
+summary(action_taken_fit2)
+```
+
+```{r}
+action_taken_fit3 <- lm(action_taken ~ derived_race + derived_ethnicity + derived_sex, data = loans_for_modelling, family = "binomial")
+summary(action_taken_fit3)
+xkablevif(action_taken_fit3)
+```
+
+```{r}
+action_taken_fit4 <- lm(action_taken ~ derived_race + derived_ethnicity + derived_sex + applicant_age, data = loans_for_modelling, family = "binomial")
+summary(action_taken_fit4)
+xkablevif(action_taken_fit4)
 ```
 
 #SideNotes on ANOVA Testing 
