@@ -573,6 +573,8 @@ str(loans_for_modelling)
 #```
 
 
+#Linear models for action_taken
+
 ```{r}
 action_taken_fit1 <- lm(action_taken ~ derived_race, data = loans_for_modelling, family = "binomial")
 summary(action_taken_fit1)
