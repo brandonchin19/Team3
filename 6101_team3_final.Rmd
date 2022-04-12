@@ -21,7 +21,7 @@ output:
 library(ezids)
 library(tidyverse)
 # knitr::opts_chunk$set(warning = F, results = "markup", message = F)
-knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+knitr::opts_chunk$set(warning = F, results = "show", message = F)
 options(scientific=T, digits = 3) 
 # options(scipen=9, digits = 3) 
 # ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
@@ -538,7 +538,7 @@ chitest4
 
 ```
 
-#Full linear model for action_taken
+### Full linear model for action_taken
 
 
 ```{r}
@@ -546,7 +546,7 @@ full_model <- lm(action_taken~., data = loans)
 summary(full_model)
 ```
 
-#Removing specific race fields due to NAs, running model again
+### Removing specific race fields due to NAs, running model again
 
 ```{r}
 loans_for_modelling <- loans[1:12]
@@ -554,18 +554,18 @@ full_model_2 <- lm(action_taken~., data = loans_for_modelling)
 summary(full_model_2)
 ```
 
-```{r}
-pcr.fit=pcr(action_taken~.,data=loans_for_modelling,scale=FALSE,validation ="CV")
-ezids::xkabledplyhead(loans_for_modelling)
-summary(pcr.fit)
-```
+#```{r}
+#pcr.fit=pcr(action_taken~.,data=loans_for_modelling,scale=FALSE,validation ="CV")
+#ezids::xkabledplyhead(loans_for_modelling)
+#summary(pcr.fit)
+#```
 
 
 ```{r}
 str(loans_for_modelling)
 ```
 
-#changing action_taken to factor for modelling purposes 
+### Changing action_taken to factor for modelling purposes 
 
 #```{r}
 #loans_for_modelling = loans_for_modelling
@@ -573,7 +573,7 @@ str(loans_for_modelling)
 #```
 
 
-#Linear models for action_taken
+### Linear models for action_taken
 
 ```{r}
 action_taken_fit1 <- lm(action_taken ~ derived_race, data = loans_for_modelling, family = "binomial")
@@ -597,6 +597,18 @@ action_taken_fit4 <- lm(action_taken ~ derived_race + derived_ethnicity + derive
 summary(action_taken_fit4)
 xkablevif(action_taken_fit4)
 ```
+
+The multiple R^2s increase with each successive model, indicating slight improvements from action_taken_fit1 through action_taken_fit4.
+
+### ANOVA comparison of models
+
+```{r}
+anova(action_taken_fit1,action_taken_fit2,action_taken_fit3,action_taken_fit4) -> anovaRes
+str(anovaRes)
+xkabledply(anovaRes, title = "ANOVA comparison between the models")
+```
+
+The residuals decrease with each successive linear model. This suggests that action_taken_fit4 is a better regression model for explaining this data.
 
 #SideNotes on ANOVA Testing 
 These are some constructs of my ANOVA test I left them here just incase I need to revist them, these might not be perfect because I ran multiple different variants, I assume it will not be used ultimately and if we need too we can run chi-squared on the balanced dataset.
