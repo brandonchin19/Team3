@@ -565,13 +565,6 @@ summary(full_model_2)
 str(loans_for_modelling)
 ```
 
-### Changing action_taken to factor for modelling purposes 
-
-#```{r}
-#loans_for_modelling = loans_for_modelling
-#loans_for_modelling$action_taken = #factor(loans_for_modelling$action_taken)
-#```
-
 
 ### Linear models for action_taken
 
@@ -609,6 +602,61 @@ xkabledply(anovaRes, title = "ANOVA comparison between the models")
 ```
 
 The residuals decrease with each successive linear model. This suggests that action_taken_fit4 is a better regression model for explaining this data.
+
+
+### Changing action_taken to factor for logit
+
+```{r}
+loans_for_modelling = loans_for_modelling
+loans_for_modelling$action_taken = factor(loans_for_modelling$action_taken)
+```
+
+
+
+### Logit models for action_taken
+
+
+```{r}
+approval_logit <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount + income, data = loans_for_modelling, family = "binomial")
+summary(approval_logit)
+xkablevif(approval_logit)
+```
+
+```{r}
+approval_logit_1 <- glm(action_taken ~ derived_race, data = loans_for_modelling, family = "binomial")
+summary(approval_logit_1)
+xkablevif(approval_logit_1)
+```
+
+
+### Sample predictions
+
+
+1. What are the chances of loan approval for a Black, non-Latino woman with an income of 45,000 per year for a requested loan amount of 100,000?
+2. What are the chances of loan approval for a Black borrower?
+3. What are the chances of loan approval for a white borrower?
+
+
+```{r}
+#define new observations
+newdata1 = data.frame(derived_race = 'Black or African American', derived_sex = 'Female', loan_amount = 100000, derived_ethnicity = 'Not Hispanic or Latino', income = 45000)
+newdata2 = data.frame(derived_race = 'Black or African American')
+newdata3 = data.frame(derived_race = 'White')
+
+
+newdata1 = predict(approval_logit, newdata1, type="response")
+newdata2 = predict(approval_logit_1, newdata2, type="response")
+newdata3 = predict(approval_logit_1, newdata3, type="response")
+newdata1
+newdata2
+newdata3
+```
+
+1. Close to 0% (model too complicated/problem with those numerical values just not being present in the data?)
+2. 34.8%
+3. 17.1%
+
+These numbers don't look correct, possibly due to the need to recode action_taken into 0 = denied and 1 = approved.
 
 #SideNotes on ANOVA Testing 
 These are some constructs of my ANOVA test I left them here just incase I need to revist them, these might not be perfect because I ran multiple different variants, I assume it will not be used ultimately and if we need too we can run chi-squared on the balanced dataset.
