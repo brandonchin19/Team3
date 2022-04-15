@@ -23,7 +23,7 @@ library(tidyverse)
 # knitr::opts_chunk$set(warning = F, results = "markup", message = F)
 knitr::opts_chunk$set(warning = F, results = "hide", message = F)
 options(scientific=T, digits = 3) 
-# options(scipen=9, digits = 3) 
+#options(scipen=9, digits = 3) 
 # ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
 # use scipen=999 to prevent scientific notation at all times
 ```
@@ -112,7 +112,7 @@ Our Github repository address is:https://github.com/brandonchin19/Team3/.
 
 ### Load in dataset
 
-```{r}
+```{r, results='hide'}
 hmda_ca <- data.frame(read.csv("hmda_ca_new.csv"))
 str(hmda_ca)
 ```
@@ -133,30 +133,28 @@ xkabledplytail(hmda_ca,5)
 
 
 ### Subsetting to California Only; non-business properties; principal residences only
-### Removed  "msa = derived_msa_md," because of error
-
-```{r}
-hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
-str(hmda_ca)
-#rename(hmda_ca, ethnicity=derived_ethnicity, race=derived_race,
-       #sex=derived_sex)
-```
-
 
 ```{r}
 hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
 str(hmda_ca)
 ```
+
+
+```{r}
+hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
+str(hmda_ca) #48030 obs. of  99 variables
+```
+
+
+
 
 ### Subsetting principal residences only; tail and head check to make sure that the geography is widespread/our sample is "random"; there are now 59 distinct counties.
 
 ```{r}
+
 hmda_ca <- subset(hmda_ca,occupancy_type=="1")
 dim(hmda_ca) #45735    99
-#xkabledplyhead(hmda_ca,5)
-#xkabledplytail(hmda_ca,5)
 loadPkg("sqldf")
-names(hmda_ca)
 sqldf("select count(distinct(county_code)) from hmda_ca")
 unloadPkg("sqldf")
 ```
@@ -173,9 +171,15 @@ dim(hmda_ca) #30661    99
 ### Subsetting relevant variables for answering the SMART question
 ```{r}
 hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,50,62,74,78)]
-str(hmda_ca_final)
+str(hmda_ca_final) #30661 obs. of  12 variables:
 ```
-
+##Clean the age group variable (some "8888" value)
+```{r}
+unique(hmda_ca_final$applicant_age)
+hmda_age<-hmda_ca_final%>%filter(applicant_age !="8888")
+unique(hmda_age$applicant_age)
+hmda_ca_final<-hmda_age
+```
 ### Changing vector types
 
 ```{r}
@@ -210,6 +214,18 @@ missvalue1 <- is.na(hmda_ca_final_2)
 summary(missvalue1)
 #After cleaning out the missing values, we are left with 28,695 observations
 ```
+##Run initial summary statistics
+
+```{r, results='show'}
+options(scipen=9, digits = 3) 
+Numerical_var <- subset(hmda_ca_final_2,select=c(loan_amount, income, property_value, interest_rate))
+library(kableExtra)
+summary_t<-kbl(summary(Numerical_var))%>%
+  kable_styling()
+summary_t
+```
+
+
 
 ### VI. Exploratory Data Analysis
 
@@ -239,24 +255,25 @@ ggplot(hmda_ca_final_2, aes(x = factor(derived_race))) +
 
 ```
 
+
 Next, we proceed to exploring the numerical data for normality and outliers. Graphs 8-10 indicate that none of the numerical variables are normally distributed.
 
 ```{r, include=TRUE}
 ggplot(hmda_ca_final_2,aes(x=loan_amount))+
   geom_histogram(color="black", fill="steelblue")+
-  labs(title=" Graph 6. Histogram of Loan Amount", x="Loan Amount in dollars", y="Frequency")+theme_bw()
+  labs(title=" Graph 6. Histogram of Loan Amount", x="Loan Amount in dollars", y="Frequency")
 
 ggplot(hmda_ca_final_2,aes(x=interest_rate))+
   geom_histogram(color="black", fill="pink")+
-  labs(title="Graph 8. Histogram of Interest Rate", x="Interest Rates", y="Frequency")+theme_bw()
+  labs(title="Graph 8. Histogram of Interest Rate", x="Interest Rates", y="Frequency")
 
 ggplot(hmda_ca_final_2,aes(x=income))+
   geom_histogram(color="black", fill="azure3")+
-  labs(title="Graph 9. Histogram of Income", x="Income in dollars", y="Frequency")+theme_bw()
+  labs(title="Graph 9. Histogram of Income", x="Income in dollars", y="Frequency")
 
 ggplot(hmda_ca_final_2,aes(x=property_value))+
   geom_histogram(color="black", fill="lightblue")+
-  labs(title="Graph 10. Histogram of Property Values", x="Property Values in dollars", y="Frequency")+theme_bw()
+  labs(title="Graph 10. Histogram of Property Values", x="Property Values in dollars", y="Frequency")
 ```
 
 
@@ -360,9 +377,9 @@ boxplot(loans$income)
 
 ## Starting the tests
 ```{r, include=TRUE}
-library(lattice)
+#library(lattice)
 #dim(loans) #28695    12
-pairs(loans)
+#pairs(loans) #let's not run this for the final project; doesn't tell us much
 #str(loans)
 
 library(epiDisplay)
@@ -398,7 +415,7 @@ corrplot(cor_loans)
 
 ```
 
-### Chi-Square Test for Loan Approval and Race: result=>reject the null of independence: all tests REJECT THE NULL HYPOTHESIS OF INDEPENDENCE NOW THAT WE HAVE MORE DATA (Applicant age is the only issue)
+### Chi-Square Test for Loan Approval and Race: result=>reject the null of independence: all tests REJECT THE NULL HYPOTHESIS OF INDEPENDENCE NOW THAT WE HAVE MORE DATA 
 ``` {r, results=TRUE}
 contable1 = table(loans$derived_race, loans$action_taken)
 xkabledply(contable1, title="Contingency table for Loan Approval and Race")
@@ -429,8 +446,7 @@ chitest4
 
 
 
-#adding New Code for final and downsampling
-
+#Adding New Code for final and downsampling
 
 ```{r}
 hmda <- data.frame(loans)
@@ -472,6 +488,7 @@ Denied<- which(hmda$action_taken=="3")
 length(Approved)
 length(Denied)
 
+#The technique
 approved_downsample<-sample(Approved,length(Denied))
 hmda_down<- hmda[c(approved_downsample, Denied),]
 str(hmda_down)
@@ -505,6 +522,7 @@ Conducting Chi-squared Test on the downsampled dataset (hmda_down)
 P-Value for contable1 is lower than .05 therefore we reject the null hypothesis. action_taken and derived_race are not independent of each other
 
 ```{r}
+
 contable1= table(hmda_down$derived_race, hmda_down$action_taken)
 xkabledply(contable1, title="Contingency table for Loan Approval and Race")
 chitest1 = chisq.test(contable1)
@@ -542,16 +560,16 @@ chitest4
 
 
 ```{r}
-full_model <- lm(action_taken~., data = loans)
-summary(full_model)
+# full_model <- lm(action_taken~., data = loans)
+# summary(full_model)
 ```
 
 ### Removing specific race fields due to NAs, running model again
 
 ```{r}
 loans_for_modelling <- loans[1:12]
-full_model_2 <- lm(action_taken~., data = loans_for_modelling)
-summary(full_model_2)
+#full_model_2 <- lm(action_taken~., data = loans_for_modelling)
+#summary(full_model_2)
 ```
 
 #```{r}
@@ -562,7 +580,7 @@ summary(full_model_2)
 
 
 ```{r}
-str(loans_for_modelling)
+#str(loans_for_modelling)
 ```
 
 
@@ -603,8 +621,43 @@ xkabledply(anovaRes, title = "ANOVA comparison between the models")
 
 The residuals decrease with each successive linear model. This suggests that action_taken_fit4 is a better regression model for explaining this data.
 
+######KS############try with recoding the ##############
+### Changing action_taken to factor for logit/recode 1 as denial and 0 as approval because we want to calculate the probability of denial
 
-### Changing action_taken to factor for logit
+
+
+```{r}
+hmda_down$action_taken<-recode(hmda_down$action_taken, "3"="1", "1"="0")
+hmda_down$action_taken<-factor(hmda_down$action_taken)
+unique(hmda_down$action_taken)
+```
+
+### Logit models for action_taken (version with recoded approval/denial)
+
+```{r}
+###using all the variables of interest first
+approval_logit <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount+applicant_age+ income+interest_rate+property_value, data = hmda_down, family = "binomial")
+summary(approval_logit)
+xkablevif(approval_logit)
+```
+VIF is quite high; likely an overfit
+
+```{r McFadden_direct}
+approvalNullLogit <- glm(action_taken ~ 1, data = hmda_down, family = "binomial")
+mcFadden = 1 - logLik(approval_logit)/logLik(approvalNullLogit)
+mcFadden
+```
+
+Only 27.1 percent of variability is explained by all of the variables we've selected. 
+
+
+
+```{r}
+approval_logit_1 <- glm(action_taken ~ derived_race, data = hmda_down, family = "binomial")
+summary(approval_logit_1)
+xkablevif(approval_logit_1)
+```
+
 
 ```{r}
 loans_for_modelling = loans_for_modelling
@@ -630,6 +683,26 @@ approval_logit_1 <- glm(action_taken ~ derived_race, data = hmda_down, family = 
 summary(approval_logit_1)
 xkablevif(approval_logit_1)
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ### Sample predictions
