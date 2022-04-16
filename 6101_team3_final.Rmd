@@ -200,17 +200,26 @@ str(hmda_ca_final_1)
 ```{r, include=TRUE}
 missvalue <- is.na(hmda_ca_final_1)
 summary(missvalue)
-#There are 26543 observations after we've filtered on all of the relevant fields. 
-#Missing values are present in interest_rate: 5851; property_value: 596, and income: 205
+#There are 30659 observations after we've filtered on all of the relevant fields. 
+#Missing values are present in interest_rate: 6917; property_value: 1733, and income: 1302
 ```
 
 
 ```{r, include=TRUE}
-hmda_ca_final_2 <- hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda_ca_final_1$interest_rate, na.rm = TRUE)
-hmda_ca_final_2 <- hmda_ca_final_1 %>% drop_na(applicant_ethnicity.1)
-hmda_ca_final_2 <- na.omit(hmda_ca_final_1, cols="income")
-missvalue1 <- is.na(hmda_ca_final_2)
+#a <- na.omit(hmda_ca_final_1, cols="income")
+#missvalue1 <- is.na(a)
+#summary(missvalue1)
+hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda_ca_final_1$interest_rate, na.rm = TRUE)
+missvalue1 <- is.na(hmda_ca_final_1)
 summary(missvalue1)
+
+hmda_ca_final_1$income[is.na(hmda_ca_final_1$income)] <- mean(hmda_ca_final_1$income, na.rm = TRUE)
+missvalue2 <- is.na(hmda_ca_final_1)
+summary(missvalue2)
+
+hmda_ca_final_2 <- na.omit(hmda_ca_final_1, cols="property_value")
+missvalue3 <- is.na(hmda_ca_final_2)
+summary(missvalue3)
 #After cleaning out the missing values, we are left with 25,764 observations
 ```
 ##Run initial summary statistics
@@ -311,10 +320,22 @@ qqline(hmda_ca_final_1$loan_amount)
 Next, we remove outliers and check for normality again.
 ```{r, include=TRUE}
 hmda_ca_final_no_outliers_3 <- outlierKD2(hmda_ca_final_2,interest_rate)
+
+
+missvalue4 <- is.na(hmda_ca_final_no_outliers_3)
+summary(missvalue4)
 ```
 
 ```{r, include=TRUE}
-hmda_ca_final_no_outliers_4 <- outlierKD2(hmda_ca_final_no_outliers_3,property_value)
+#hmda_ca_final_no_outliers_4 <- outlierKD2(hmda_ca_final_no_outliers_3,property_value)
+boxplot(hmda_ca_final_no_outliers_3$property_value)
+boxplot(hmda_ca_final_no_outliers_3$property_value)$out
+outliers <- boxplot(hmda_ca_final_no_outliers_3$property_value, plot=FALSE)$out
+hmda_ca_final_no_outliers_3[which(hmda_ca_final_no_outliers_3$property_value %in% outliers),]
+hmda_ca_final_no_outliers_4<- hmda_ca_final_no_outliers_3[-which(hmda_ca_final_no_outliers_3$property_value %in% outliers),]
+boxplot(hmda_ca_final_no_outliers_4$property_value)
+missvalue5 <- is.na(hmda_ca_final_no_outliers_4)
+summary(missvalue5)
 ```
 
 
