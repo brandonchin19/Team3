@@ -334,6 +334,7 @@ outliers <- boxplot(hmda_ca_final_no_outliers_3$property_value, plot=FALSE)$out
 hmda_ca_final_no_outliers_3[which(hmda_ca_final_no_outliers_3$property_value %in% outliers),]
 hmda_ca_final_no_outliers_4<- hmda_ca_final_no_outliers_3[-which(hmda_ca_final_no_outliers_3$property_value %in% outliers),]
 boxplot(hmda_ca_final_no_outliers_4$property_value)
+boxplot(hmda_ca_final_no_outliers_4$property_value)$out
 missvalue5 <- is.na(hmda_ca_final_no_outliers_4)
 summary(missvalue5)
 ```
@@ -579,68 +580,7 @@ chitest4
 
 ```
 
-<!-- ### Full linear model for action_taken -->
 
-
-<!-- ```{r} -->
-<!-- # full_model <- lm(action_taken~., data = loans) -->
-<!-- # summary(full_model) -->
-<!-- ``` -->
-
-<!-- ### Removing specific race fields due to NAs, running model again -->
-
-<!-- ```{r} -->
-<!-- loans_for_modelling <- loans[1:12] -->
-<!-- #full_model_2 <- lm(action_taken~., data = loans_for_modelling) -->
-<!-- #summary(full_model_2) -->
-<!-- ``` -->
-
-<!-- #```{r} -->
-<!-- #pcr.fit=pcr(action_taken~.,data=loans_for_modelling,scale=FALSE,validation ="CV") -->
-<!-- #ezids::xkabledplyhead(loans_for_modelling) -->
-<!-- #summary(pcr.fit) -->
-<!-- #``` -->
-
-
-<!-- ```{r} -->
-<!-- #str(loans_for_modelling) -->
-<!-- ``` -->
-
-
-<!-- ### Linear models for action_taken -->
-
-<!-- ```{r} -->
-<!-- action_taken_fit1 <- lm(action_taken ~ derived_race+loan_amount, data = loans_for_modelling) -->
-<!-- summary(action_taken_fit1) -->
-<!-- xkablevif(action_taken_fit1) -->
-<!-- ``` -->
-
-```{r}
-action_taken_fit2 <- lm(action_taken ~ derived_race + derived_ethnicity, data = loans_for_modelling, family = "binomial")
-summary(action_taken_fit2)
-```
-
-```{r}
-action_taken_fit3 <- lm(action_taken ~ derived_race + derived_ethnicity + derived_sex, data = loans_for_modelling, family = "binomial")
-summary(action_taken_fit3)
-xkablevif(action_taken_fit3)
-```
-
-```{r}
-action_taken_fit4 <- lm(action_taken ~ derived_race + derived_ethnicity + derived_sex + applicant_age, data = loans_for_modelling, family = "binomial")
-summary(action_taken_fit4)
-xkablevif(action_taken_fit4)
-```
-
-The multiple R^2s increase with each successive model, indicating slight improvements from action_taken_fit1 through action_taken_fit4.
-
-### ANOVA comparison of models
-
-```{r}
-anova(action_taken_fit1,action_taken_fit2,action_taken_fit3,action_taken_fit4) -> anovaRes
-str(anovaRes)
-xkabledply(anovaRes, title = "ANOVA comparison between the models")
-```
 
 The residuals decrease with each successive linear model. This suggests that action_taken_fit4 is a better regression model for explaining this data.
 
@@ -681,8 +621,9 @@ The Hosmer and Lemeshow Goodness of Fit test can be used to evaluate logistic re
 
 ```{r HosmerLemeshow}
 loadPkg("ResourceSelection") # function hoslem.test( ) for logit model evaluation
-approveLogitHoslem = hoslem.test(action_taken$hmda_down, fitted(approval_logit)) # Hosmer and Lemeshow test, a chi-squared tests
+approveLogitHoslem = hoslem.test(hmda_down$action_taken, fitted(approval_logit)) # Hosmer and Lemeshow test, a chi-squared tests
 unloadPkg("ResourceSelection") 
+approveLogitHoslem
 ```
 
 The result is shown here:  
@@ -701,6 +642,65 @@ plot(h)
 # unloadPkg("pROC")
 
 ```
+
+
+
+```{r Splitting Model for Train and Test}
+set.seed(123)
+index <- sample(nrow(hmda_down),nrow(hmda_down)*0.80)
+training = hmda_down[index,]
+testing = hmda_down[-index,]
+
+
+hmda_glm0 <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount+applicant_age+ income+interest_rate+property_value, data = training, family = "binomial")
+summary(hmda_glm0)
+
+
+
+
+```
+```{r verifying training and testing data}
+
+summary(training) 
+summary(testing) 
+
+
+```
+
+
+
+
+
+
+#Note that feature selection gives us this model below, which has the lowest deviance and lowest AIC score at 519.4.
+
+glm(formula = action_taken ~ derived_sex + loan_amount + income + 
+    property_value, family = "binomial", data = training)
+    
+
+```{r variable/feature selection using backward selection AIC}
+hmda_glm_back <- step(hmda_glm0) #backward selections
+summary(hmda_glm_back)
+hmda_glm_back$deviance
+AIC(hmda_glm_back)
+
+
+```
+
+
+
+```{r Predictive Analysis Using Testing dataset on training model}
+
+
+
+
+
+
+```
+
+
+
+
 
 <!-- ```{r} -->
 <!-- approval_logit_1 <- glm(action_taken ~ derived_race, data = hmda_down, family = "binomial") -->
