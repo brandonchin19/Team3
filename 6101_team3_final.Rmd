@@ -145,9 +145,6 @@ hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
 str(hmda_ca) #48030 obs. of  99 variables
 ```
 
-
-
-
 ### Subsetting principal residences only; tail and head check to make sure that the geography is widespread/our sample is "random"; there are now 59 distinct counties.
 
 ```{r}
@@ -171,14 +168,15 @@ dim(hmda_ca) #30661    99
 ### Subsetting relevant variables for answering the SMART question
 ```{r}
 hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,50,62,74,78)]
-str(hmda_ca_final) #30661 obs. of  12 variables:
+str(hmda_ca_final) #30661 obs. of  13 variables:
 ```
-##Clean the age group variable (some "8888" value)
+##Clean the age and debt-to-income ratio group variable (some "8888" value)
 ```{r}
 unique(hmda_ca_final$applicant_age)
 hmda_age<-hmda_ca_final%>%filter(applicant_age !="8888")
 unique(hmda_age$applicant_age)
 hmda_ca_final<-hmda_age
+
 ```
 ### Changing vector types
 
@@ -193,6 +191,7 @@ hmda_ca_final_1$interest_rate = as.numeric(hmda_ca_final$interest_rate)
 hmda_ca_final_1$property_value = as.numeric(hmda_ca_final$property_value)
 hmda_ca_final_1$income = as.numeric(hmda_ca_final$income)
 hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
+hmda_ca_final_1$applicant_ethnicity.1=factor(hmda_ca_final$applicant_age)
 str(hmda_ca_final_1)
 ```
 
@@ -201,8 +200,8 @@ str(hmda_ca_final_1)
 ```{r, include=TRUE}
 missvalue <- is.na(hmda_ca_final_1)
 summary(missvalue)
-#There are 30,661 observations after we've filtered on all of the relevant fields. 
-#Missing values are present in interest_rate: 6,919; property_value: 1,734, and income: 1,302.
+#There are 26543 observations after we've filtered on all of the relevant fields. 
+#Missing values are present in interest_rate: 5851; property_value: 596, and income: 205
 ```
 
 
@@ -212,7 +211,7 @@ hmda_ca_final_2 <- hmda_ca_final_1 %>% drop_na(applicant_ethnicity.1)
 hmda_ca_final_2 <- na.omit(hmda_ca_final_1, cols="income")
 missvalue1 <- is.na(hmda_ca_final_2)
 summary(missvalue1)
-#After cleaning out the missing values, we are left with 28,695 observations
+#After cleaning out the missing values, we are left with 25,764 observations
 ```
 ##Run initial summary statistics
 
@@ -253,6 +252,7 @@ ggplot(hmda_ca_final_2, aes(x = factor(derived_race))) +
     geom_bar(color="black", fill="azure3")+
   labs(title="Graph 5. Derived Race", x="Race of the Applicant", y= "Count")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
+
 ```
 
 
@@ -274,6 +274,8 @@ ggplot(hmda_ca_final_2,aes(x=income))+
 ggplot(hmda_ca_final_2,aes(x=property_value))+
   geom_histogram(color="black", fill="lightblue")+
   labs(title="Graph 10. Histogram of Property Values", x="Property Values in dollars", y="Frequency")
+
+
 ```
 
 
@@ -556,41 +558,41 @@ chitest4
 
 ```
 
-### Full linear model for action_taken
+<!-- ### Full linear model for action_taken -->
 
 
-```{r}
-# full_model <- lm(action_taken~., data = loans)
-# summary(full_model)
-```
+<!-- ```{r} -->
+<!-- # full_model <- lm(action_taken~., data = loans) -->
+<!-- # summary(full_model) -->
+<!-- ``` -->
 
-### Removing specific race fields due to NAs, running model again
+<!-- ### Removing specific race fields due to NAs, running model again -->
 
-```{r}
-loans_for_modelling <- loans[1:12]
-#full_model_2 <- lm(action_taken~., data = loans_for_modelling)
-#summary(full_model_2)
-```
+<!-- ```{r} -->
+<!-- loans_for_modelling <- loans[1:12] -->
+<!-- #full_model_2 <- lm(action_taken~., data = loans_for_modelling) -->
+<!-- #summary(full_model_2) -->
+<!-- ``` -->
 
-#```{r}
-#pcr.fit=pcr(action_taken~.,data=loans_for_modelling,scale=FALSE,validation ="CV")
-#ezids::xkabledplyhead(loans_for_modelling)
-#summary(pcr.fit)
-#```
-
-
-```{r}
-#str(loans_for_modelling)
-```
+<!-- #```{r} -->
+<!-- #pcr.fit=pcr(action_taken~.,data=loans_for_modelling,scale=FALSE,validation ="CV") -->
+<!-- #ezids::xkabledplyhead(loans_for_modelling) -->
+<!-- #summary(pcr.fit) -->
+<!-- #``` -->
 
 
-### Linear models for action_taken
+<!-- ```{r} -->
+<!-- #str(loans_for_modelling) -->
+<!-- ``` -->
 
-```{r}
-action_taken_fit1 <- lm(action_taken ~ derived_race, data = loans_for_modelling, family = "binomial")
-summary(action_taken_fit1)
-xkablevif(action_taken_fit1)
-```
+
+<!-- ### Linear models for action_taken -->
+
+<!-- ```{r} -->
+<!-- action_taken_fit1 <- lm(action_taken ~ derived_race+loan_amount, data = loans_for_modelling) -->
+<!-- summary(action_taken_fit1) -->
+<!-- xkablevif(action_taken_fit1) -->
+<!-- ``` -->
 
 ```{r}
 action_taken_fit2 <- lm(action_taken ~ derived_race + derived_ethnicity, data = loans_for_modelling, family = "binomial")
@@ -630,6 +632,7 @@ The residuals decrease with each successive linear model. This suggests that act
 hmda_down$action_taken<-recode(hmda_down$action_taken, "3"="1", "1"="0")
 hmda_down$action_taken<-factor(hmda_down$action_taken)
 unique(hmda_down$action_taken)
+str(hmda_down)
 ```
 
 ### Logit models for action_taken (version with recoded approval/denial)
@@ -639,8 +642,9 @@ unique(hmda_down$action_taken)
 approval_logit <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount+applicant_age+ income+interest_rate+property_value, data = hmda_down, family = "binomial")
 summary(approval_logit)
 xkablevif(approval_logit)
+hmda_down$action_taken
 ```
-VIF is quite high; likely an overfit
+VIF is quite high; not a great model
 
 ```{r McFadden_direct}
 approvalNullLogit <- glm(action_taken ~ 1, data = hmda_down, family = "binomial")
@@ -650,118 +654,143 @@ mcFadden
 
 Only 27.1 percent of variability is explained by all of the variables we've selected. 
 
+#### Hosmer and Lemeshow test  
 
+The Hosmer and Lemeshow Goodness of Fit test can be used to evaluate logistic regression fit. 
 
-```{r}
-approval_logit_1 <- glm(action_taken ~ derived_race, data = hmda_down, family = "binomial")
-summary(approval_logit_1)
-xkablevif(approval_logit_1)
+```{r HosmerLemeshow}
+loadPkg("ResourceSelection") # function hoslem.test( ) for logit model evaluation
+approveLogitHoslem = hoslem.test(action_taken$hmda_down, fitted(approval_logit)) # Hosmer and Lemeshow test, a chi-squared tests
+unloadPkg("ResourceSelection") 
 ```
 
+The result is shown here:  
+```{r HosmerLemeshowRes, results='markup', collapse=F}
+approveLogitHoslem
 
-```{r}
-loans_for_modelling = loans_for_modelling
-loans_for_modelling$action_taken = factor(loans_for_modelling$action_taken)
 ```
 
-```{r}
-hmda_down = hmda_down
-hmda_down$action_taken = factor(hmda_down$action_taken)
+```{r roc_auc}
+loadPkg("pROC") # receiver operating characteristic curve, gives the diagnostic ability of a binary classifier system as its discrimination threshold is varied. The curve is on sensitivity/recall/true-positive-rate vs false_alarm/false-positive-rate/fall-out.
+prob=predict(approval_logit, type = "response" )
+hmda_down$prob=prob
+h <- roc(action_taken~prob, data=hmda_down)
+auc(h) # area-under-curve prefer 0.8 or higher.
+plot(h)
+# unloadPkg("pROC")
+
 ```
 
-### Logit models for action_taken
+<!-- ```{r} -->
+<!-- approval_logit_1 <- glm(action_taken ~ derived_race, data = hmda_down, family = "binomial") -->
+<!-- summary(approval_logit_1) -->
+<!-- xkablevif(approval_logit_1) -->
+<!-- ``` -->
 
 
-```{r}
-approval_logit <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount + income, data = hmda_down, family = "binomial")
-summary(approval_logit)
-xkablevif(approval_logit)
-```
+<!-- ```{r} -->
+<!-- loans_for_modelling = loans_for_modelling -->
+<!-- loans_for_modelling$action_taken = factor(loans_for_modelling$action_taken) -->
+<!-- ``` -->
 
-```{r}
-approval_logit_1 <- glm(action_taken ~ derived_race, data = hmda_down, family = "binomial")
-summary(approval_logit_1)
-xkablevif(approval_logit_1)
-```
+<!-- ```{r} -->
+<!-- hmda_down = hmda_down -->
+<!-- hmda_down$action_taken = factor(hmda_down$action_taken) -->
+<!-- ``` -->
 
-
+<!-- ### Logit models for action_taken -->
 
 
+<!-- ```{r} -->
+<!-- approval_logit <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount + income, data = hmda_down, family = "binomial") -->
+<!-- summary(approval_logit) -->
+<!-- xkablevif(approval_logit) -->
+<!-- ``` -->
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Sample predictions
-
-
-1. What are the chances of loan approval for a Black, non-Latino woman with an income of 45,000 per year for a requested loan amount of 100,000?
-2. What are the chances of loan approval for a Black borrower?
-3. What are the chances of loan approval for a white borrower?
-
-
-```{r}
-#define new observations
-newdata1 = data.frame(derived_race = 'Black or African American', derived_sex = 'Female', loan_amount = 100000, derived_ethnicity = 'Not Hispanic or Latino', income = 45000)
-newdata2 = data.frame(derived_race = 'Black or African American')
-newdata3 = data.frame(derived_race = 'White')
-
-
-newdata1 = predict(approval_logit, newdata1, type="response")
-newdata2 = predict(approval_logit_1, newdata2, type="response")
-newdata3 = predict(approval_logit_1, newdata3, type="response")
-newdata1
-newdata2
-newdata3
-```
-
-1. Close to 0% (model too complicated/problem with those numerical values just not being present in the data?)
-2. 68.1%
-3. 44%
-
-
-```{r}
-summary(hmda_down$action_taken)
-```
-
-#SideNotes on ANOVA Testing 
-These are some constructs of my ANOVA test I left them here just incase I need to revist them, these might not be perfect because I ran multiple different variants, I assume it will not be used ultimately and if we need too we can run chi-squared on the balanced dataset.
-
-Conducting ANOVA Test on action_taken variable and income, saved test as anova
-
-anova= aov(income ~ approval, data=hmda)
-str(anova)
+<!-- ```{r} -->
+<!-- approval_logit_1 <- glm(action_taken ~ derived_race, data = hmda_down, family = "binomial") -->
+<!-- summary(approval_logit_1) -->
+<!-- xkablevif(approval_logit_1) -->
+<!-- ``` -->
 
 
 
-#Plotting ANOVA TEST
 
 
 
-loadPkg("ggplot2")
-ggplot(hmda, aes(x=approval, y=income)) +
-  geom_boxplot( colour=c("#ff0000" ,"#11cc11")) +
-  labs(title="Income difference between Approved and Denied Apps", x="Approval Status", y = "Income")
 
 
- #plot(income ~ action_taken, data=hmda)
-anova= aov(action_taken ~ Black, data=hmda)
-# anovaRes    # this does not give the easy-to-read result of the aov analysis
-names(anova)
-# summary(anovaRes)
-xkabledply(anova) # same exact result with or without re-ordering.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- ### Sample predictions -->
+
+
+<!-- 1. What are the chances of loan approval for a Black, non-Latino woman with an income of 45,000 per year for a requested loan amount of 100,000? -->
+<!-- 2. What are the chances of loan approval for a Black borrower? -->
+<!-- 3. What are the chances of loan approval for a white borrower? -->
+
+
+<!-- ```{r} -->
+<!-- #define new observations -->
+<!-- newdata1 = data.frame(derived_race = 'Black or African American', derived_sex = 'Female', loan_amount = 100000, derived_ethnicity = 'Not Hispanic or Latino', income = 45000) -->
+<!-- newdata2 = data.frame(derived_race = 'Black or African American') -->
+<!-- newdata3 = data.frame(derived_race = 'White') -->
+
+
+<!-- newdata1 = predict(approval_logit, newdata1, type="response") -->
+<!-- newdata2 = predict(approval_logit_1, newdata2, type="response") -->
+<!-- newdata3 = predict(approval_logit_1, newdata3, type="response") -->
+<!-- newdata1 -->
+<!-- newdata2 -->
+<!-- newdata3 -->
+<!-- ``` -->
+
+<!-- 1. Close to 0% (model too complicated/problem with those numerical values just not being present in the data?) -->
+<!-- 2. 68.1% -->
+<!-- 3. 44% -->
+
+
+<!-- ```{r} -->
+<!-- summary(hmda_down$action_taken) -->
+<!-- ``` -->
+
+<!-- #SideNotes on ANOVA Testing  -->
+<!-- These are some constructs of my ANOVA test I left them here just incase I need to revist them, these might not be perfect because I ran multiple different variants, I assume it will not be used ultimately and if we need too we can run chi-squared on the balanced dataset. -->
+
+<!-- Conducting ANOVA Test on action_taken variable and income, saved test as anova -->
+
+<!-- anova= aov(income ~ approval, data=hmda) -->
+<!-- str(anova) -->
+
+
+
+<!-- #Plotting ANOVA TEST -->
+
+
+
+<!-- loadPkg("ggplot2") -->
+<!-- ggplot(hmda, aes(x=approval, y=income)) + -->
+<!--   geom_boxplot( colour=c("#ff0000" ,"#11cc11")) + -->
+<!--   labs(title="Income difference between Approved and Denied Apps", x="Approval Status", y = "Income") -->
+
+
+<!--  #plot(income ~ action_taken, data=hmda) -->
+<!-- anova= aov(action_taken ~ Black, data=hmda) -->
+<!-- # anovaRes    # this does not give the easy-to-read result of the aov analysis -->
+<!-- names(anova) -->
+<!-- # summary(anovaRes) -->
+<!-- xkabledply(anova) # same exact result with or without re-ordering. -->
 
 
