@@ -691,9 +691,10 @@ AIC(hmda_glm_back)
 
 ```{r Predictive Analysis Using Testing dataset on training model}
 
+hmda_glm<-glm(formula = action_taken ~ derived_sex + loan_amount + income + 
+    property_value, family = "binomial", data = training)
 
-
-
+summary(hmda_glm)
 
 
 ```
