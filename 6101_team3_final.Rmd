@@ -112,7 +112,7 @@ Our Github repository address is:https://github.com/brandonchin19/Team3/.
 
 ### Load in dataset
 
-```{r, include=FALSE}
+```{r, results='hide'}
 hmda_ca <- data.frame(read.csv("hmda_ca_new.csv"))
 str(hmda_ca)
 ```
@@ -132,7 +132,7 @@ xkabledplytail(hmda_ca,5)
 ```
 
 
-### Subsetting to non-business properties; principal residences only
+### Subsetting to California Only; non-business properties; principal residences only
 
 ```{r}
 hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
@@ -148,6 +148,7 @@ str(hmda_ca) #48030 obs. of  99 variables
 ### Subsetting principal residences only; tail and head check to make sure that the geography is widespread/our sample is "random"; there are now 59 distinct counties.
 
 ```{r}
+
 hmda_ca <- subset(hmda_ca,occupancy_type=="1")
 dim(hmda_ca) #45735    99
 loadPkg("sqldf")
@@ -167,7 +168,7 @@ dim(hmda_ca) #30661    99
 ### Subsetting relevant variables for answering the SMART question
 ```{r}
 hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,50,62,74,78)]
-str(hmda_ca_final) #30661 obs. of  12 variables:
+str(hmda_ca_final) #30661 obs. of  13 variables:
 ```
 ##Clean the age and debt-to-income ratio group variable (some "8888" value)
 ```{r}
@@ -177,7 +178,6 @@ unique(hmda_age$applicant_age)
 hmda_ca_final<-hmda_age
 
 ```
-
 ### Changing vector types
 
 ```{r}
@@ -191,7 +191,6 @@ hmda_ca_final_1$interest_rate = as.numeric(hmda_ca_final$interest_rate)
 hmda_ca_final_1$property_value = as.numeric(hmda_ca_final$property_value)
 hmda_ca_final_1$income = as.numeric(hmda_ca_final$income)
 hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
-hmda_ca_final_1$applicant_ethnicity.1=factor(hmda_ca_final$applicant_age)
 str(hmda_ca_final_1)
 ```
 
@@ -211,7 +210,7 @@ summary(missvalue)
 #summary(missvalue1)
 hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda_ca_final_1$interest_rate, na.rm = TRUE)
 missvalue1 <- is.na(hmda_ca_final_1)
-#summary(missvalue1)
+summary(missvalue1)
 
 hmda_ca_final_1$income[is.na(hmda_ca_final_1$income)] <- mean(hmda_ca_final_1$income, na.rm = TRUE)
 missvalue2 <- is.na(hmda_ca_final_1)
@@ -220,7 +219,7 @@ summary(missvalue2)
 hmda_ca_final_2 <- na.omit(hmda_ca_final_1, cols="property_value")
 missvalue3 <- is.na(hmda_ca_final_2)
 summary(missvalue3)
-#After cleaning out the missing values, we are left with 28926  observations
+#After cleaning out the missing values, we are left with 25,764 observations
 ```
 ##Run initial summary statistics
 
@@ -231,8 +230,6 @@ library(kableExtra)
 summary_t<-kbl(summary(Numerical_var))%>%
   kable_styling()
 summary_t
-
-#No NAs
 ```
 
 
@@ -243,23 +240,24 @@ summary_t
 
 ```{r, include=TRUE}
 library(ggplot2)
-ggplot(hmda_ca_final_2, aes(x = factor(derived_sex), fill=derived_sex)) +
-    geom_bar()+
+ggplot(hmda_ca_final_2, aes(x = factor(derived_sex))) +
+    geom_bar(color="black", fill="antiquewhite2")+
   labs(title="Graph 1. Applicant sex distribution", x="Applicant Sex", y="Count")
 
-ggplot(hmda_ca_final_2, aes(x = factor(applicant_age),fill=applicant_age)) +
-    geom_bar()+
+ggplot(hmda_ca_final_2, aes(x = factor(applicant_age))) +
+    geom_bar(color="black", fill="bisque3")+
   labs(title="Graph 2. Applicant age distribution", x="Applicant Age", y="Count")
 
-ggplot(hmda_ca_final_2, aes(x = factor(derived_ethnicity), fill=derived_ethnicity)) +geom_bar()+
+ggplot(hmda_ca_final_2, aes(x = factor(derived_ethnicity))) +
+    geom_bar(color="black", fill="cornsilk3")+
   labs(title="Graph 3. Applicant ethnicity distribution", x="Applicant Ethnicity", y="Count")
 
-ggplot(hmda_ca_final_2, aes(x = factor(action_taken), fill=action_taken)) +
-    geom_bar()+
+ggplot(hmda_ca_final_2, aes(x = factor(action_taken))) +
+    geom_bar(color="black", fill="azure3")+
   labs(title="Graph 4. Action taken distribution", x="Action Taken", y="Count")
 
-ggplot(hmda_ca_final_2, aes(x = factor(derived_race), fill=derived_race)) +
-    geom_bar()+
+ggplot(hmda_ca_final_2, aes(x = factor(derived_race))) +
+    geom_bar(color="black", fill="azure3")+
   labs(title="Graph 5. Derived Race", x="Race of the Applicant", y= "Count")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 
@@ -347,10 +345,9 @@ hmda_ca_final_no_outliers_5 <- outlierKD2(hmda_ca_final_no_outliers_4,income)
 
 ```{r, include=TRUE}
 loans <- outlierKD2(hmda_ca_final_no_outliers_5,loan_amount)
-dim(loans) # 27,168 after removing the outliers
 ```
 
-#Reexamine the variables for normality after removing the outliers.
+We then reexamine the variables for normality after removing the outliers.
 
 ```{r, include=TRUE}
 qqnorm(loans$interest_rate,
@@ -388,31 +385,26 @@ summary_t<-kbl(summary(Numerical_var))%>%
   kable_styling()
 summary_t
 
-
-```
-
-```{r, remove missing values again, include=TRUE}
-loans_m<-loans%>%filter(!(is.na(loan_amount)))
-dim(loans_m) #27118    12
-loans_m1<-loans_m%>%filter(!(is.na(income)))
-dim(loans_m1) #26295    12
-loans<-loans_m1%>%filter(!(is.na(interest_rate)))
-dim(loans)#final #24018    12
-
+# GROUP: what's with the NAs in the summary table after we have cleaned the NAs out?
 ```
 However, the means and the medians are fairly close in all instances; do we keep removing the outliers?
 
 ```{r, include=TRUE} 
 #this chunk is for visual inspection only: EITHER DELETE or FORMAT before the final submission
-# boxplot(loans$interest_rate)
-# boxplot(loans$loan_amount)
-# boxplot(loans$property_value)
-# boxplot(loans$income)
+boxplot(loans$interest_rate)
+boxplot(loans$loan_amount)
+boxplot(loans$property_value)
+boxplot(loans$income)
 ```
 
 
 ## Starting the tests
 ```{r, include=TRUE}
+#library(lattice)
+#dim(loans) #28695    12
+#pairs(loans) #let's not run this for the final project; doesn't tell us much
+#str(loans)
+
 library(epiDisplay)
 tab1(loans$derived_race, sort.group = "decreasing", cum.percent = TRUE)
 ```
@@ -434,8 +426,7 @@ str(loans)
 ```{r, include=FALSE}
 loans_all_num<-loans[c(4:17)]
 loans_all_num$applicant_age =as.numeric(loans$applicant_age)
-loans_all_num$applicant_ethnicity.1=as.numeric(loans$applicant_ethnicity.1)
-str(loans_all_num)
+#str(loans_all_num)
 ```
 
 
@@ -490,8 +481,8 @@ hmda$approval<- factor(hmda$approval)
 str(hmda)
 table(hmda$approval)
 
-# Approved   Denied 
-#    18542     5476 
+#Approved   Denied 
+   #22773     5922 
 
 ```
 
@@ -512,6 +503,7 @@ with(hmda,
 ```
 Creating DownSample of hmda dataset, 
 the Approved far outnumber the Denied making this dataset severely unbalanced 
+  #Approved: 22773     Denied: 5922 
 ```{r}
 Approved<- which(hmda$action_taken=="1")
 Denied<- which(hmda$action_taken=="3")
@@ -526,7 +518,7 @@ str(hmda_down)
 
 ```
 
-#3Balanced data are down to 10952 obs
+
 ```{r}
 
 hmda_downnum<-hmda_down[c(4:11, 13:17, 19)]
@@ -587,7 +579,15 @@ chitest4
 
 ```
 
+
+
+The residuals decrease with each successive linear model. This suggests that action_taken_fit4 is a better regression model for explaining this data.
+
+######KS############try with recoding the ##############
 ### Changing action_taken to factor for logit/recode 1 as denial and 0 as approval because we want to calculate the probability of denial
+
+
+
 ```{r}
 hmda_down$action_taken<-recode(hmda_down$action_taken, "3"="1", "1"="0")
 hmda_down$action_taken<-factor(hmda_down$action_taken)
@@ -598,21 +598,12 @@ str(hmda_down)
 ### Logit models for action_taken (version with recoded approval/denial)
 
 ```{r}
-###clean up the loans data again
-
-
-```
-
-
-
-
-```{r, results=TRUE}
+###using all the variables of interest first
 approval_logit <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount+applicant_age+ income+interest_rate+property_value, data = hmda_down, family = "binomial")
 summary(approval_logit)
 xkablevif(approval_logit)
 hmda_down$action_taken
 ```
-
 VIF is quite high; not a great model
 
 ```{r McFadden_direct}
