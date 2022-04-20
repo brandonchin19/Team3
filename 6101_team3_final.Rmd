@@ -191,7 +191,7 @@ hmda_ca_final_1$interest_rate = as.numeric(hmda_ca_final$interest_rate)
 hmda_ca_final_1$property_value = as.numeric(hmda_ca_final$property_value)
 hmda_ca_final_1$income = as.numeric(hmda_ca_final$income)
 hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
-hmda_ca_final_1$applicant_ethnicity.1=factor(hmda_ca_final$applicant_age)
+#hmda_ca_final_1$applicant_ethnicity.1=factor(hmda_ca_final$applicant_age)
 str(hmda_ca_final_1)
 ```
 
