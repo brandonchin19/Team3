@@ -442,10 +442,6 @@ summary(hmda_glm0)
 summary(training) 
 summary(testing) 
 
-# use the function prop.table() combined with table() to verify if the randomization process is correct.
-prop.table(table(training$action_taken))
-prop.table(table(testing$action_taken))
-
 ```
 
 
