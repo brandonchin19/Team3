@@ -61,7 +61,6 @@ outlierKD2 <- function(df, var, rm=TRUE, boxplt=TRUE, histogram=TRUE, qqplt=TRUE
   }
   if (histogram) { hist(var_name, main="With outliers", xlab=NA, ylab=NA) }
   if (boxplt) { boxplot(var_name, main="With outliers") }
-
   outlier <- boxplot.stats(var_name)$out
   mo <- mean(outlier)
   var_name <- ifelse(var_name %in% outlier, NA, var_name)
@@ -82,7 +81,6 @@ outlierKD2 <- function(df, var, rm=TRUE, boxplt=TRUE, histogram=TRUE, qqplt=TRUE
     cat("Mean without removing outliers:", round(m1, 2), "\n")
     cat("Mean if we remove outliers:", round(m2, 2), "\n")
   }
-
   # response <- readline(prompt="Do you want to remove outliers and to replace with NA? [yes/no]: ")
   # if(response == "y" | response == "yes"){
   if(rm){
@@ -95,7 +93,6 @@ outlierKD2 <- function(df, var, rm=TRUE, boxplt=TRUE, histogram=TRUE, qqplt=TRUE
       return(invisible(df))
   }
 }
-
 ```
 
 ### Research Topic:
@@ -141,7 +138,6 @@ library(kableExtra)
 summary_t<-kbl(summary(Numerical_var))%>%
   kable_styling()
 summary_t
-
 #Note the income values are weird; never noticed they were probably standardized (divided by 1000)
 ```
 
@@ -155,41 +151,32 @@ library(ggplot2)
 ggplot(loans, aes(x = factor(derived_sex), fill=derived_sex)) +
     geom_bar()+
   labs(title="Graph 1. Applicant sex distribution", x="Applicant Sex", y="Count")
-
 ggplot(loans, aes(x = factor(applicant_age),fill=applicant_age)) +
     geom_bar()+
   labs(title="Graph 2. Applicant age distribution", x="Applicant Age", y="Count")
-
 ggplot(loans, aes(x = factor(derived_ethnicity), fill=derived_ethnicity)) +geom_bar()+
   labs(title="Graph 3. Applicant ethnicity distribution", x="Applicant Ethnicity", y="Count")
-
 ggplot(loans, aes(x = factor(action_taken), fill=action_taken)) +
     geom_bar()+
   labs(title="Graph 4. Action taken distribution", x="Action Taken", y="Count")
-
 ggplot(loans, aes(x = factor(derived_race), fill=derived_race)) +
     geom_bar()+
   labs(title="Graph 5. Derived Race", x="Race of the Applicant", y= "Count")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
 ```
 
 ```{r, include=TRUE}
 ggplot(loans,aes(x=loan_amount))+
   geom_histogram(color="black", fill="steelblue")+
   labs(title=" Graph 6. Histogram of Loan Amount", x="Loan Amount in dollars", y="Frequency")
-
 ggplot(loans,aes(x=interest_rate))+
   geom_histogram(color="black", fill="pink")+
   labs(title="Graph 8. Histogram of Interest Rate", x="Interest Rates", y="Frequency")
-
 ggplot(loans,aes(x=income))+
   geom_histogram(color="black", fill="green")+
   labs(title="Graph 9. Histogram of Income", x="Income in dollars", y="Frequency")
-
 ggplot(loans,aes(x=property_value))+
   geom_histogram(color="black", fill="lightblue")+
   labs(title="Graph 10. Histogram of Property Values", x="Property Values in dollars", y="Frequency")
-
 ```
 
 
@@ -199,16 +186,12 @@ ggplot(loans,aes(x=property_value))+
 
 ```{r}
 hmda <- data.frame(loans)
-
-
 hmda$approval<- ifelse(hmda$action_taken=="1", "Approved","Denied")
 hmda$approval<- factor(hmda$approval)
 str(hmda)
 table(hmda$approval)
-
 # Approved   Denied 
 #    18542     5476 
-
 ```
 
 
@@ -221,7 +204,6 @@ with(hmda,
        print(table(approval))
      }
 )
-
 ```
 Creating DownSample of hmda dataset, 
 the Approved far outnumber the Denied making this dataset severely unbalanced 
@@ -229,21 +211,17 @@ the Approved far outnumber the Denied making this dataset severely unbalanced
 ```{r}
 Approved<- which(hmda$action_taken=="1")
 Denied<- which(hmda$action_taken=="3")
-
 length(Approved)
 length(Denied)
-
 #The technique
 approved_downsample<-sample(Approved,length(Denied))
 hmda_down<- hmda[c(approved_downsample, Denied),]
 str(hmda_down)
 #10952 obs. of  11 variables
-
 #Balanced Graph: confirming that it's balanced now
 # ggplot(hmda_down, aes(x = factor(action_taken), fill=action_taken)) +
 #     geom_bar()+
 #   labs(title=" Action taken distribution in the Balanced Dataset", x="Action Taken", y="Count")
-
 ```
 
 
@@ -253,12 +231,10 @@ Conducting Chi-squared Test on the downsampled dataset (hmda_down)
 P-Value for contable1 is lower than .05 therefore we reject the null hypothesis. action_taken and derived_race are not independent of each other
 
 ```{r}
-
 contable1= table(hmda_down$derived_race, hmda_down$action_taken)
 xkabledply(contable1, title="Contingency table for Loan Approval and Race")
 chitest1 = chisq.test(contable1)
 chitest1
-
 ```
 
 
@@ -284,7 +260,6 @@ contable4= table(hmda_down$applicant_age, hmda_down$action_taken)
 xkabledply(contable4, title="Contingency table for Loan Approval and Age")
 chitest4 = chisq.test(contable4)
 chitest4
-
 ```
 
 
@@ -296,7 +271,6 @@ hmda_down$action_taken<-dplyr::recode(hmda_down$action_taken, "3"="1", "1"="0")
 unique(hmda_down$action_taken)
 hmda_down$action_taken<-factor(hmda_down$action_taken)
 str(hmda_down)
-
 myvars <- names(hmda_down) %in% c("approval") # dropping approval since we don't need this variable anymore
 newdata <- hmda_down[!myvars]
 hmda_down<-newdata
@@ -335,7 +309,6 @@ approveLogitHoslem
 Per Hosmer and Leshow, our model is quite poor; p-value is extremely low
 ```{r HosmerLemeshowRes, results='markup', collapse=F}
 approveLogitHoslem
-
 ```
 
 ```{r roc_auc}
@@ -346,7 +319,6 @@ h <- roc(action_taken~prob, data=hmda_down)
 auc(h) # area-under-curve prefer 0.8 or higher.
 plot(h)
 # unloadPkg("pROC")
-
 ```
 
 
@@ -358,15 +330,11 @@ fs_hmda_down<-hmda_down
 fs_hmda_down$y = hmda_down[,4] 
 str(fs_hmda_down)
 fs_hmda_down<-fs_hmda_down[c(1:3, 5:9, 11)] #subset for feature selection model that does not include action_taken
-
 str(fs_hmda_down)
-
 res.bestglm <- bestglm(Xy = fs_hmda_down, family = binomial,
             IC = "AIC",                 # Information criteria for
             method = "exhaustive")
-
 summary(res.bestglm)
-
 res.bestglm$BestModels
 summary(res.bestglm$BestModels)
 #https://rstudio-pubs-static.s3.amazonaws.com/2897_9220b21cfc0c43a396ff9abf122bb351.html
@@ -376,11 +344,7 @@ summary(res.bestglm$BestModels)
 approval_logit1 <- glm(action_taken ~ derived_race + derived_ethnicity + loan_amount+applicant_age+ income+interest_rate+property_value, data = hmda_down, family = "binomial")
 summary(approval_logit1)
 xkablevif(approval_logit) #check for multicollinearity
-
 unique(hmda_down$action_taken)
-
-
-
 ```
 
 #McFadden isn't much improved
@@ -399,7 +363,6 @@ h <- roc(action_taken~prob, data=hmda_down)
 auc(h) # area-under-curve prefer 0.8 or higher.
 plot(h)
 # unloadPkg("pROC")
-
 ```
 
 #Try standardizing the data?
@@ -407,14 +370,9 @@ plot(h)
 std_hmda_down<-hmda_down
 std_hmda_down$loan_amount<-hmda_down$loan_amount/1000
 std_hmda_down$property_value<-hmda_down$property_value/1000
-
 approval_std <- glm(action_taken ~ derived_race + derived_ethnicity + loan_amount+applicant_age+ income+property_value, data = std_hmda_down, family = "binomial")
 summary(approval_std)  #### took the interest rate out too
 xkablevif(approval_std) #check for multicollinearity
-
-
-
-
 ```
 
 
@@ -428,22 +386,23 @@ set.seed(123)
 index <- sample(nrow(hmda_down),nrow(hmda_down)*0.80)
 training = hmda_down[index,]
 testing = hmda_down[-index,]
-
-
 hmda_glm0 <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount+applicant_age+ income+interest_rate+property_value, data = training, family = "binomial")
 summary(hmda_glm0)
-
-
-
 ```
 ```{r verifying training and testing data}
-
 summary(training) 
 summary(testing) 
-
-
 ```
 
+
+
+
+
+
+#Note that feature selection gives us this model below, which has the lowest deviance and lowest AIC score at 519.4.
+
+glm(formula = action_taken ~ derived_sex + loan_amount + income + 
+    property_value, family = "binomial", data = training)
     
 
 ```{r variable/feature selection using backward selection AIC}
@@ -451,18 +410,14 @@ hmda_glm_back <- step(hmda_glm0) #backward selections
 summary(hmda_glm_back)
 hmda_glm_back$deviance
 AIC(hmda_glm_back)
-
-
 ```
 
 
-#Accuracy for our model is 72.9%  Recall Rate is 73.9 
-```{r Predictive Analysis Using Testing dataset on training model}
 
 
+Accuracy Score is 72% and recall rate is 73%
+```{r Predictive Analysis & Confusion Matrix}
 library(caret)
-library(ggplot2)
-
 glm_fit = glm(action_taken ~ derived_race + derived_ethnicity + loan_amount+applicant_age+ income+interest_rate+property_value, data = training, family = "binomial")
 
 glm_probs = data.frame(probs = predict(glm_fit, 
@@ -476,27 +431,30 @@ glm_pred = glm_probs %>%
 
 pc<-factor(glm_pred$pred)
 e<- (testing$action_taken)
+
+
 table(pc)
 table(e)
 
 
-cfm<-confusionMatrix(data=pc, reference = e)
+confusionMatrix(data=pc, reference = e)
 
 
+x<-data.frame("target"=c(1,0,1,0), "prediction"=c(1,1,0,0), "n"=c(817,306,288,786))
 
-x<-data.frame("target"=c(0,1,0,1),"prediction"=c(0,0,1,1),"n"=c(780, 288, 306, 817))
+library(ggplot2)
 
-#"title"=c("780, 306, 288, 817")
-
-
-
-
-
-cfm
-ggplot(x, aes(x = target, y = reorder(prediction, desc(prediction))  , fill = n)) +
+ggplot(x, aes(x = target, y = prediction, fill = n)) +
   geom_tile(color = "black") +
-  geom_text(aes(label = n), color = "Yellow", size = 4) +labs(x = "Prediction",y = "True/False")+
-  coord_fixed()
+  geom_text(aes(label = n), color = "Yellow", size = 4) +
+  coord_fixed()+
+  scale_fill_gradient2(low = "#075AFF",
+                       mid = "#FFFFCC",
+                       high = "Purple") +
+     scale_y_continuous(trans = "reverse", breaks = unique(x$prediction))
+
+ 
+
 
 
 ```
@@ -505,11 +463,9 @@ ggplot(x, aes(x = target, y = reorder(prediction, desc(prediction))  , fill = n)
 ```{r}
 library(rpart)
 library(rpart.plot)
-
 fit <- rpart(action_taken~derived_sex + loan_amount + income + 
     property_value, data = training, method = 'class')
 rpart.plot(fit, extra = 106)
-
 ```
 At the top(node1), it is the overall probability of loan approval. It shows the proportion of applicant that get approval for their loan. 50 percent of applicant get approval.
 Node1 asks whether the loan amount is equal or greater than 130e+3. If yes, then we go down to the root’s left income node (depth 2). 31 percent of applicants need loan amount over 130e+3 with loan denied probability of 64 percent.
@@ -531,5 +487,4 @@ table_mat
 accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)#0.655
 ```
 We have a score of 66 percent for the test set.
-
 
