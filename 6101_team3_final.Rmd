@@ -446,6 +446,7 @@ xkabledply(contable1, title="Contingency table for Loan Approval and Race")
 chitest1 = chisq.test(contable1)
 chitest1
 ```
+Since we get a p-Value less than the significance level of 0.05, we reject the null hypothesis and conclude that the two variables are in fact dependent.
 
 ``` {r, results=TRUE}
 contable2 = table(loans$derived_sex, loans$action_taken)
@@ -688,14 +689,37 @@ AIC(hmda_glm_back)
 ```
 
 
-
 ```{r Predictive Analysis Using Testing dataset on training model}
 
 hmda_glm<-glm(formula = action_taken ~ derived_sex + loan_amount + income + 
     property_value, family = "binomial", data = training)
 
 summary(hmda_glm)
+```
+# decision trees 
+```{r}
+library(rpart)
+library(rpart.plot)
 
+fit <- rpart(action_taken~derived_sex + loan_amount + income + 
+    property_value, data = training, method = 'class')
+rpart.plot(fit, extra = 106)
 
 ```
+At the top(node1), it is the overall probability of loan approval. It shows the proportion of applicant that get approval for their loan. 50 percent of applicant get approval.
+Node1 asks whether the loan amount is equal or greater than 130e+3. If yes, then we go down to the root’s left income node (depth 2). 31 percent of applicants need loan amount over 130e+3 with loan denied probability of 64 percent.
+In the node2, asking if the applicant's income is above 84. If no, 28 percent of applicant's income is below 84 and the chance of denial is 54 percent.
+Asking if the applicant's loan amount is above less than 370e+3, 21 percent of applicants need loan amount over 370e+3 and the chance of denial for them is 50 percent. with loan amount below 370e+3, their chance of get denial is 67%.
+13 percent of applicants's income below 60, and their loan denial chance is 56%.
+
+# confustion martrix 
+```{r}
+table(hmda_down$action_taken, predict > 0.5)
+
+```
+# Evaluate overdispersion
+```{r}
+deviance(hmda_glm)/df.residual(hmda_glm) 
+```
+If the ratio considerably larger than 1, then it indicates that we have an overdispersion issue. Calculating this ratio using our data example, we find that the ratio is larger than 1. It means we have overdispersion problem on our model.
 
