@@ -442,6 +442,9 @@ summary(hmda_glm0)
 summary(training) 
 summary(testing) 
 
+# use the function prop.table() combined with table() to verify if the randomization process is correct.
+prop.table(table(training$action_taken))
+prop.table(table(testing$action_taken))
 
 ```
 
@@ -478,34 +481,42 @@ summary(hmda_glm)
 ```
 
 # decision trees 
+#split data
+```{r}
+n = nrow(loans)
+split = sample(c(TRUE, FALSE), n, replace=TRUE, prob=c(0.8, 0.2))
+
+tree.training = loans[split, ]
+tree.testing = loans[!split, ]
+```
+# building model
 ```{r}
 library(rpart)
 library(rpart.plot)
-
-fit <- rpart(action_taken~derived_sex + loan_amount + income + 
-    property_value, data = training, method = 'class')
+fit <- rpart(action_taken~., data = tree.training, method = 'class',control = ("maxdepth = 4"))
 rpart.plot(fit, extra = 106)
 
 ```
-At the top(node1), it is the overall probability of loan approval. It shows the proportion of applicant that get approval for their loan. 50 percent of applicant get approval.
-Node1 asks whether the loan amount is equal or greater than 130e+3. If yes, then we go down to the root’s left income node (depth 2). 31 percent of applicants need loan amount over 130e+3 with loan denied probability of 64 percent.
-In the node2, asking if the applicant's income is above 84. If no, 28 percent of applicant's income is below 84 and the chance of denial is 54 percent.
-Asking if the applicant's loan amount is above less than 370e+3, 21 percent of applicants need loan amount over 370e+3 and the chance of denial for them is 50 percent. with loan amount below 370e+3, their chance of get denial is 67%.
-13 percent of applicants's income below 60, and their loan denial chance is 56%.
+At the top(node1), it is the overall probability of loan approval. It shows the proportion of applicant that get approved for their loan. 50 percent of applicant get approved.
+
+Node1 asks whether the interest rate is less than 4.5, If yes, 37 percent of applicants have no chance to have their loan approved; if no, 63 percent of applicants have 79 percent of chance to have their loan denied. 
+
+In the node2, asking if the interest rate is equal or greater than 4.5, If yes, 50 percent of applicant have 100 percent of chance to have their loan denied; if no, 13 percent of applicants will not have their loan approved. 
 
 #making a prediction
 ```{r}
-predict_unseen <-predict(fit, testing, type = 'class')
+predict_unseen <-predict(fit, tree.testing, type = 'class')
+summary(predict_unseen)
 ```
 #Create a table to count how many applicants are classified as approval and denied
 ```{r}
-table_mat <- table(testing$action_taken, predict_unseen )
+table_mat <- table(tree.testing$action_taken, predict_unseen )
 table_mat
+
 ```
 #Measure performance:confustion martrix 
 ```{r}
-accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)#0.655
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)#0.999
 ```
-We have a score of 66 percent for the test set.
-
+We have a score of 99 percent for the test set.
 
