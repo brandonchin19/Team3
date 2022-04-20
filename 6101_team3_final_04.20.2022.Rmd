@@ -435,7 +435,6 @@ summary(hmda_glm0)
 
 
 
-
 ```
 ```{r verifying training and testing data}
 
@@ -445,15 +444,6 @@ summary(testing)
 
 ```
 
-
-
-
-
-
-#Note that feature selection gives us this model below, which has the lowest deviance and lowest AIC score at 519.4.
-
-glm(formula = action_taken ~ derived_sex + loan_amount + income + 
-    property_value, family = "binomial", data = training)
     
 
 ```{r variable/feature selection using backward selection AIC}
@@ -466,13 +456,47 @@ AIC(hmda_glm_back)
 ```
 
 
-
+#Accuracy for our model is 72.9%  Recall Rate is 73.9 
 ```{r Predictive Analysis Using Testing dataset on training model}
 
-hmda_glm<-glm(formula = action_taken ~ derived_sex + loan_amount + income + 
-    property_value, family = "binomial", data = training)
 
-summary(hmda_glm)
+library(caret)
+library(ggplot2)
+
+glm_fit = glm(action_taken ~ derived_race + derived_ethnicity + loan_amount+applicant_age+ income+interest_rate+property_value, data = training, family = "binomial")
+
+glm_probs = data.frame(probs = predict(glm_fit, 
+                                       newdata = testing, 
+                                       type="response"))
+
+glm_pred = glm_probs %>%
+  mutate(pred = ifelse(probs>.5, "1", "0"))
+
+
+
+pc<-factor(glm_pred$pred)
+e<- (testing$action_taken)
+table(pc)
+table(e)
+
+
+cfm<-confusionMatrix(data=pc, reference = e)
+
+
+
+x<-data.frame("target"=c(0,1,0,1),"prediction"=c(0,0,1,1),"n"=c(780, 288, 306, 817))
+
+#"title"=c("780, 306, 288, 817")
+
+
+
+
+
+cfm
+ggplot(x, aes(x = target, y = reorder(prediction, desc(prediction))  , fill = n)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = n), color = "Yellow", size = 4) +labs(x = "Prediction",y = "True/False")+
+  coord_fixed()
 
 
 ```
