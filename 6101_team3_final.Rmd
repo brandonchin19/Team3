@@ -1,5 +1,5 @@
 ---
-title: "DATS 6101 Final Project"
+title: "Technical Analysis: DATS 6101 Final Project"
 author: "Brandon Chin, Paul Kelly, Ksenia Shadrina, Luke Wu"
 date: "4/11/22"
 # date: "`r Sys.Date()`"
@@ -21,7 +21,7 @@ output:
 library(ezids)
 library(tidyverse)
 # knitr::opts_chunk$set(warning = F, results = "markup", message = F)
-knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+knitr::opts_chunk$set(warning = F, results = "show", message = F)
 options(scientific=T, digits = 3) 
 #options(scipen=9, digits = 3) 
 # ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
@@ -100,382 +100,158 @@ outlierKD2 <- function(df, var, rm=TRUE, boxplt=TRUE, histogram=TRUE, qqplt=TRUE
 
 ### Research Topic:
 
-There is considerable evidence indicating lending disparities throughout the United States. (Steil et. al: 2018). For our research topic, we will explore lending practices in one of the fastest appreciating real estate markets over the past thirty years - the state of California. Specifically, we aim to look at the factors that are associated with denials for non-commercial mortgage loans.
+In the course of the midterm project research, we discovered that answering our original SMART question would require,at the very least, building a logistic regression model. In addition, we discovered that we had an unbalanced dataset which behooved us to increase our sample size significantly: from 5,000 to 50,000 observations on California.
 
-Our SMART question is:
+Based on our initial findings, we proceeded to testing the relationship between rate of loan denials and income of applicant, loan amount, interest rate, property value, gender of applicant, race of applicant, age of applicant, ethnicity of applicant. 
+
+Thus, our SMART question remained largely unchanged:
 
 “Which factors drove denials for mortgages in California in 2019?”
 
-To answer this question, we are using the Federal Financial Institutions Examination Council's (FFIEC) Home Mortgage Disclosure Act (HMDA) dataset from 2019, located here: https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level-dataset/2019. We are  focusing on a subset of data of 10,000 observations from 2019 that we will further filter on California leaving us with 5,196 observations.
+We are using the same dataset as in the midterm project but with 50,000 observations: Federal Financial Institutions Examination Council's (FFIEC) Home Mortgage Disclosure Act (HMDA) dataset from 2019 https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level- dataset/2019.
 
 Our Github repository address is:https://github.com/brandonchin19/Team3/.
 
-### Load in dataset
+All of the data cleaning procedures remained the same as in the midterm; therefore, our starting point here is 24,018 observations. Specifically, we filtered on the action_taken of denial and approval, removed all the business properties, removed outliers, and removed the missing values. The resulting dataset  "loans.csv" is our starting point. 
 
-```{r, results='hide'}
-hmda_ca <- data.frame(read.csv("hmda_ca_new.csv"))
-str(hmda_ca)
-```
-
-### Check number of rows
-
-```{r}
-dim(hmda_ca)
-```
-
-
-### Check head and tail of dataframe
-
-```{r}
-xkabledplyhead(hmda_ca,5)
-xkabledplytail(hmda_ca,5)
-```
-
-
-### Subsetting to California Only; non-business properties; principal residences only
-
-```{r}
-hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
-str(hmda_ca)
-```
-
-
-```{r}
-hmda_ca <- subset(hmda_ca,business_or_commercial_purpose=="2")
-str(hmda_ca) #48030 obs. of  99 variables
-```
-
-### Subsetting principal residences only; tail and head check to make sure that the geography is widespread/our sample is "random"; there are now 59 distinct counties.
-
-```{r}
-
-hmda_ca <- subset(hmda_ca,occupancy_type=="1")
-dim(hmda_ca) #45735    99
-loadPkg("sqldf")
-sqldf("select count(distinct(county_code)) from hmda_ca")
-unloadPkg("sqldf")
-```
-
-### Subsetting to only relevant actions: denial or approval
-
-```{r}
-hmda_ca1<-hmda_ca%>%filter(action_taken %in% c("1", "3"))
-hmda_ca<-hmda_ca1
-dim(hmda_ca) #30661    99
-```
-
-
-### Subsetting relevant variables for answering the SMART question
-```{r}
-hmda_ca_final <- hmda_ca[c(10,11,12,13,22,24,39,46,50,62,74,78)]
-str(hmda_ca_final) #30661 obs. of  13 variables:
-```
-##Clean the age and debt-to-income ratio group variable (some "8888" value)
-```{r}
-unique(hmda_ca_final$applicant_age)
-hmda_age<-hmda_ca_final%>%filter(applicant_age !="8888")
-unique(hmda_age$applicant_age)
-hmda_ca_final<-hmda_age
-
-```
-### Changing vector types
-
-```{r}
-hmda_ca_final_1 = hmda_ca_final
-hmda_ca_final_1$derived_ethnicity = factor(hmda_ca_final$derived_ethnicity)
-hmda_ca_final_1$derived_race = factor(hmda_ca_final$derived_race)
-hmda_ca_final_1$derived_sex = factor(hmda_ca_final$derived_sex)
-#hmda_ca_final_1$action_taken = factor(hmda_ca_final$action_taken)
-hmda_ca_final_1$loan_amount = as.numeric(hmda_ca_final$loan_amount)
-hmda_ca_final_1$interest_rate = as.numeric(hmda_ca_final$interest_rate)
-hmda_ca_final_1$property_value = as.numeric(hmda_ca_final$property_value)
-hmda_ca_final_1$income = as.numeric(hmda_ca_final$income)
-hmda_ca_final_1$applicant_age = factor(hmda_ca_final$applicant_age)
-#hmda_ca_final_1$applicant_ethnicity.1=factor(hmda_ca_final$applicant_age)
-str(hmda_ca_final_1)
-```
-
-#Examine and filter out the missing values 
-
-```{r, include=TRUE}
-missvalue <- is.na(hmda_ca_final_1)
-summary(missvalue)
-#There are 30659 observations after we've filtered on all of the relevant fields. 
-#Missing values are present in interest_rate: 6917; property_value: 1733, and income: 1302
-```
-
-
-```{r, include=TRUE}
-#a <- na.omit(hmda_ca_final_1, cols="income")
-#missvalue1 <- is.na(a)
-#summary(missvalue1)
-hmda_ca_final_1$interest_rate[is.na(hmda_ca_final_1$interest_rate)] <- mean(hmda_ca_final_1$interest_rate, na.rm = TRUE)
-missvalue1 <- is.na(hmda_ca_final_1)
-summary(missvalue1)
-
-hmda_ca_final_1$income[is.na(hmda_ca_final_1$income)] <- mean(hmda_ca_final_1$income, na.rm = TRUE)
-missvalue2 <- is.na(hmda_ca_final_1)
-summary(missvalue2)
-
-hmda_ca_final_2 <- na.omit(hmda_ca_final_1, cols="property_value")
-missvalue3 <- is.na(hmda_ca_final_2)
-summary(missvalue3)
-#After cleaning out the missing values, we are left with 25,764 observations
-```
-##Run initial summary statistics
+### Load in the clean dataset
 
 ```{r, results='show'}
-options(scipen=9, digits = 3) 
-Numerical_var <- subset(hmda_ca_final_2,select=c(loan_amount, income, property_value, interest_rate))
-library(kableExtra)
-summary_t<-kbl(summary(Numerical_var))%>%
-  kable_styling()
-summary_t
+loans <- data.frame(read.csv("loans.csv"))
+str(loans) #24018 obs. of  9 variables # dropped applicant sex because it's essentially the same as derived sex
 ```
 
+### Changing vector types 
 
-
-### VI. Exploratory Data Analysis
-
-#Exploring the categorical values first
-
-```{r, include=TRUE}
-library(ggplot2)
-ggplot(hmda_ca_final_2, aes(x = factor(derived_sex))) +
-    geom_bar(color="black", fill="antiquewhite2")+
-  labs(title="Graph 1. Applicant sex distribution", x="Applicant Sex", y="Count")
-
-ggplot(hmda_ca_final_2, aes(x = factor(applicant_age))) +
-    geom_bar(color="black", fill="bisque3")+
-  labs(title="Graph 2. Applicant age distribution", x="Applicant Age", y="Count")
-
-ggplot(hmda_ca_final_2, aes(x = factor(derived_ethnicity))) +
-    geom_bar(color="black", fill="cornsilk3")+
-  labs(title="Graph 3. Applicant ethnicity distribution", x="Applicant Ethnicity", y="Count")
-
-ggplot(hmda_ca_final_2, aes(x = factor(action_taken))) +
-    geom_bar(color="black", fill="azure3")+
-  labs(title="Graph 4. Action taken distribution", x="Action Taken", y="Count")
-
-ggplot(hmda_ca_final_2, aes(x = factor(derived_race))) +
-    geom_bar(color="black", fill="azure3")+
-  labs(title="Graph 5. Derived Race", x="Race of the Applicant", y= "Count")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
-
-```
-
-
-Next, we proceed to exploring the numerical data for normality and outliers. Graphs 8-10 indicate that none of the numerical variables are normally distributed.
-
-```{r, include=TRUE}
-ggplot(hmda_ca_final_2,aes(x=loan_amount))+
-  geom_histogram(color="black", fill="steelblue")+
-  labs(title=" Graph 6. Histogram of Loan Amount", x="Loan Amount in dollars", y="Frequency")
-
-ggplot(hmda_ca_final_2,aes(x=interest_rate))+
-  geom_histogram(color="black", fill="pink")+
-  labs(title="Graph 8. Histogram of Interest Rate", x="Interest Rates", y="Frequency")
-
-ggplot(hmda_ca_final_2,aes(x=income))+
-  geom_histogram(color="black", fill="azure3")+
-  labs(title="Graph 9. Histogram of Income", x="Income in dollars", y="Frequency")
-
-ggplot(hmda_ca_final_2,aes(x=property_value))+
-  geom_histogram(color="black", fill="lightblue")+
-  labs(title="Graph 10. Histogram of Property Values", x="Property Values in dollars", y="Frequency")
-
-
-```
-
-
-As another check, we inspect qqnorm plots and confirm that the distributions are not normal(Graph 11-14)
-
-```{r, include=TRUE}
-qqnorm(hmda_ca_final_2$interest_rate,
-       main="Graph 11. QQ Plot of Interest Rates",
-       ylab="Interest Rate",
-       col="pink")
-qqline(hmda_ca_final_2$interest_rate)
-
-qqnorm(hmda_ca_final_2$income,
-       main="Graph 13. QQ Plot of Income",
-       ylab="Income",
-       col="green")
-qqline(hmda_ca_final_2$income)
-
-qqnorm(hmda_ca_final_2$property_value,
-       main="Graph 12. QQ Plot of Property Values",
-       ylab="Property Value",
-       col="blue")
-qqline(hmda_ca_final_2$property_value)
-
-qqnorm(hmda_ca_final_2$loan_amount,
-       main="Graph 14.QQ Plot of Loan Amount",
-       ylab="Loan Amount",
-       col="purple")
-qqline(hmda_ca_final_1$loan_amount)
-```
-
-
-Next, we remove outliers and check for normality again.
-```{r, include=TRUE}
-hmda_ca_final_no_outliers_3 <- outlierKD2(hmda_ca_final_2,interest_rate)
-
-
-missvalue4 <- is.na(hmda_ca_final_no_outliers_3)
-summary(missvalue4)
-```
-
-```{r, include=TRUE}
-#hmda_ca_final_no_outliers_4 <- outlierKD2(hmda_ca_final_no_outliers_3,property_value)
-boxplot(hmda_ca_final_no_outliers_3$property_value)
-boxplot(hmda_ca_final_no_outliers_3$property_value)$out
-outliers <- boxplot(hmda_ca_final_no_outliers_3$property_value, plot=FALSE)$out
-hmda_ca_final_no_outliers_3[which(hmda_ca_final_no_outliers_3$property_value %in% outliers),]
-hmda_ca_final_no_outliers_4<- hmda_ca_final_no_outliers_3[-which(hmda_ca_final_no_outliers_3$property_value %in% outliers),]
-boxplot(hmda_ca_final_no_outliers_4$property_value)
-boxplot(hmda_ca_final_no_outliers_4$property_value)$out
-missvalue5 <- is.na(hmda_ca_final_no_outliers_4)
-summary(missvalue5)
-```
-
-
-```{r, include=TRUE}
-hmda_ca_final_no_outliers_5 <- outlierKD2(hmda_ca_final_no_outliers_4,income)
-```
-
-```{r, include=TRUE}
-loans <- outlierKD2(hmda_ca_final_no_outliers_5,loan_amount)
-```
-
-We then reexamine the variables for normality after removing the outliers.
-
-```{r, include=TRUE}
-qqnorm(loans$interest_rate,
-       main="Graph 15. QQ Plot of Interest Rates",
-       ylab="Interest Rate",
-       col="pink")
-qqline(loans$interest_rate)
-
-qqnorm(loans$property_value,
-       main="Graph 16. QQ Plot of Property Values",
-       ylab="Property Value",
-       col="blue")
-qqline(loans$property_value)
-
-qqnorm(loans$income,
-       main="Graph 17.QQ Plot of Income",
-       ylab="Income",
-       col="green")
-qqline(loans$income)
-
-qqnorm(loans$loan_amount,
-       main="Graph 18. QQ Plot of Loan Amount",
-       ylab="Loan Amount",
-       col="purple")
-qqline(loans$loan_amount)
-```
-
-The values do not appear to be normally distributed even after removing the outliers
-
-```{r, include=TRUE}
-Numerical_var <- subset(loans,select=c(loan_amount, income, property_value, interest_rate))
-#str(Numerical_var)
-library(kableExtra)
-summary_t<-kbl(summary(Numerical_var))%>%
-  kable_styling()
-summary_t
-
-# GROUP: what's with the NAs in the summary table after we have cleaned the NAs out?
-```
-However, the means and the medians are fairly close in all instances; do we keep removing the outliers?
-
-```{r, include=TRUE} 
-#this chunk is for visual inspection only: EITHER DELETE or FORMAT before the final submission
-boxplot(loans$interest_rate)
-boxplot(loans$loan_amount)
-boxplot(loans$property_value)
-boxplot(loans$income)
-```
-
-
-## Starting the tests
-```{r, include=TRUE}
-#library(lattice)
-#dim(loans) #28695    12
-#pairs(loans) #let's not run this for the final project; doesn't tell us much
-#str(loans)
-
-library(epiDisplay)
-tab1(loans$derived_race, sort.group = "decreasing", cum.percent = TRUE)
-```
-
-
-##Preparing data for corrplot
-```{r, include=FALSE}
-summary(loans$derived_race)
-loans$Black<- ifelse(loans$derived_race=="Black or African American", 1, 0)
-loans$AIAN<- ifelse(loans$derived_race=="American Indian or Alaska Native", 1, 0)
-loans$NHPI<- ifelse(loans$derived_race=="Native Hawaiian or Other Pacific Islander", 1, 0)
-loans$Asian<- ifelse(loans$derived_race=="Asian", 1, 0)
-loans$Joint<- ifelse(loans$derived_race=="Joint", 1, 0)
-loans$N_A<- ifelse(loans$derived_race=="Race Not Available", 1, 0)
-loans$two_or<- ifelse(loans$derived_race=="2 or more minority races", 1, 0)
+```{r, results='hide'}
+loans$derived_ethnicity = factor(loans$derived_ethnicity)
+loans$derived_race = factor(loans$derived_race)
+loans$derived_sex = factor(loans$derived_sex)
+loans$loan_amount = as.numeric(loans$loan_amount)
+loans$interest_rate = as.numeric(loans$interest_rate)
+loans$property_value = as.numeric(loans$property_value)
+loans$income = as.numeric(loans$income)
+loans$applicant_age = factor(loans$applicant_age)
 str(loans)
 ```
 
-```{r, include=FALSE}
-loans_all_num<-loans[c(4:17)]
-loans_all_num$applicant_age =as.numeric(loans$applicant_age)
-#str(loans_all_num)
+### Examine if there are  missing values 
+
+```{r, results='hide'}
+missvalue <- is.na(loans)
+summary(missvalue) 
 ```
 
+There are no missing values. 
+
+### Run initial summary statistics: note different scales for income and interest rate
+
+```{r, results='show'}
+options(scipen=9, digits = 3) 
+Numerical_var <- subset(loans,select=c(loan_amount, income, property_value, interest_rate))
+library(kableExtra)
+summary_t<-kbl(summary(Numerical_var))%>%
+  kable_styling()
+summary_t
+```
+
+The four numerical variables we are left with are not normally distributed; however, means and medians are close enough. Here, we note the different scales of numerical variables, going forward
+
+### Exploratory Data Analysis
+
+We then do a visual inspection of the new dataset we have, starting with categorical values.
 
 ```{r, include=TRUE}
-cor_loans<-cor(loans_all_num, use="complete.obs")
-xkabledply(cor_loans)
-loadPkg("corrplot")
-corrplot(cor_loans)
+library(ggplot2)
+ggplot(loans, aes(x = factor(derived_sex), fill=derived_sex)) +
+    geom_bar()+
+  labs(title="Graph 1. Applicant sex distribution", x="Applicant Sex", y="Count")
+
+ggplot(loans, aes(x = factor(applicant_age),fill=applicant_age)) +
+    geom_bar()+
+  labs(title="Graph 2. Applicant age distribution", x="Applicant Age", y="Count")
+
+ggplot(loans, aes(x = factor(derived_ethnicity), fill=derived_ethnicity)) +geom_bar()+
+  labs(title="Graph 3. Applicant ethnicity distribution", x="Applicant Ethnicity", y="Count")
+
+ggplot(loans, aes(x = factor(action_taken), fill=action_taken)) +
+    geom_bar()+
+  labs(title="Graph 4. Action taken distribution", x="Action Taken", y="Count")
+
+ggplot(loans, aes(x = factor(derived_race), fill=derived_race)) +
+    geom_bar()+
+  labs(title="Graph 5. Derived Race", x="Race of the Applicant", y= "Count")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 ```
 
-### Chi-Square Test for Loan Approval and Race: result=>reject the null of independence: all tests REJECT THE NULL HYPOTHESIS OF INDEPENDENCE NOW THAT WE HAVE MORE DATA 
-``` {r, results=TRUE}
-contable1 = table(loans$derived_race, loans$action_taken)
+There are three noteworthy features in the categorical graphs which remain the same as in our midterm project.
+
+First, we note that ethnicity and race variables are overly represented by "Not Hispanic or Latino" and "white" are overrepresented. Secondly, there is an obvious overlap between these two variables with the skew in these two respective categories, and in future research, these two variables should either be combined or used in separate model. Third, the action_taken graph is heavily skewed on approvals.
+
+Next, we proceed to examining the numerical variable histograms.
+
+```{r, include=TRUE}
+ggplot(loans,aes(x=loan_amount))+
+  geom_histogram(color="black", fill="steelblue")+
+  labs(title=" Graph 6. Histogram of Loan Amount", x="Loan Amount in dollars", y="Frequency")
+
+ggplot(loans,aes(x=interest_rate))+
+  geom_histogram(color="black", fill="pink")+
+  labs(title="Graph 8. Histogram of Interest Rate", x="Interest Rates", y="Frequency")
+
+ggplot(loans,aes(x=income))+
+  geom_histogram(color="black", fill="green")+
+  labs(title="Graph 9. Histogram of Income", x="Income in dollars", y="Frequency")
+
+ggplot(loans,aes(x=property_value))+
+  geom_histogram(color="black", fill="lightblue")+
+  labs(title="Graph 10. Histogram of Property Values", x="Property Values in dollars", y="Frequency")
+
+```
+
+Only income and property values appear to approach normal distribution. We proceed without taking any additional outliers out because balancing of the data will require to remove additonal data.
+
+We decided to run to chi-square tests on the unbalanced data first, and contrary to the results we got in the midterm project, all tests ran well and showed statistical significance this time.
+
+```{r, results='show'}
+
+contable1= table(loans$derived_race, loans$action_taken)
 xkabledply(contable1, title="Contingency table for Loan Approval and Race")
 chitest1 = chisq.test(contable1)
 chitest1
-```
-Since we get a p-Value less than the significance level of 0.05, we reject the null hypothesis and conclude that the two variables are in fact dependent.
 
-``` {r, results=TRUE}
-contable2 = table(loans$derived_sex, loans$action_taken)
-xkabledply(contable2, title="Contingency table for Loan Approval and Sex")
+```
+
+```{r, results='show'}
+contable2= table(loans$derived_ethnicity, loans$action_taken)
+xkabledply(contable2, title="Contingency table for Loan Approval and Ethnicity")
 chitest2 = chisq.test(contable2)
 chitest2
 ```
 
-``` {r, results=TRUE}
-contable3 = table(loans$derived_ethnicity, loans$action_taken)
-xkabledply(contable3, title="Contingency table for Loan Approval and Ethnicity")
+```{r, results='show'}
+contable3= table(loans$derived_sex, loans$action_taken)
+xkabledply(contable3, title="Contingency table for Loan Approval and Gender")
 chitest3 = chisq.test(contable3)
 chitest3
 ```
 
-``` {r, results=TRUE}
-contable4 = table(loans$applicant_age, loans$action_taken)
+```{r, results='show'}
+contable4= table(loans$applicant_age, loans$action_taken)
 xkabledply(contable4, title="Contingency table for Loan Approval and Age")
 chitest4 = chisq.test(contable4)
 chitest4
+
 ```
 
+Despite the chi-square tests running well and confirming that denial or approvals are not independent of personal attributes of the applicants: race, ethnicity, age, and sex.
 
+We proceed to balancing the dataset
 
-#Adding New Code for final and downsampling
+### Balancing the dataset
 
 ```{r}
 hmda <- data.frame(loans)
-str(hmda$action_taken)
 
 
 hmda$approval<- ifelse(hmda$action_taken=="1", "Approved","Denied")
@@ -483,15 +259,11 @@ hmda$approval<- factor(hmda$approval)
 str(hmda)
 table(hmda$approval)
 
-#Approved   Denied 
-   #22773     5922 
-
 ```
 
+The number of approvals is over three times higher than denials as shown in the table below.
 
-Checking frequency of approval variable and derived_race variable
-
-```{r}
+```{r, results='show'}
 with(hmda,
      {
        print(table(derived_race))
@@ -499,14 +271,11 @@ with(hmda,
      }
 )
 
-
-
-
 ```
-Creating DownSample of hmda dataset, 
-the Approved far outnumber the Denied making this dataset severely unbalanced 
-  #Approved: 22773     Denied: 5922 
-```{r}
+
+To balance the dataset, the downsampling technique is used. Balancing the dataset leaves us with 10,952 observations.
+
+```{r, results='show'}
 Approved<- which(hmda$action_taken=="1")
 Denied<- which(hmda$action_taken=="3")
 
@@ -517,125 +286,125 @@ length(Denied)
 approved_downsample<-sample(Approved,length(Denied))
 hmda_down<- hmda[c(approved_downsample, Denied),]
 str(hmda_down)
+#10952 obs. of  11 variables
 
 ```
 
+### The Chi Square Tests on balanced dataset
 
-```{r}
+We then, rerun the Chi-Square tests on the balanced dataset (hmda_down)
 
-hmda_downnum<-hmda_down[c(4:11, 13:17, 19)]
-hmda_downnum$approved<- ifelse(hmda_downnum$action_taken=="1", 1, 0)
-hmda_downnum$denied<- ifelse(hmda_downnum$action_taken=="3", 1, 0)
+P-Values for all of the tests are once again lower than .05 therefore we reject the null hypotheses in all four cases again.
 
-str(hmda_downnum)
-```
+Ran 4 Chi Squared Test
+Action_Taken (our Approval-Denial Variable) and Race
+At the .05 significance level proved that  Action_taken was not independent of Race
+ p-value <2e-16
+Action_Taken and Ethnicity 
+At the .05 significance level proved that  Action_taken was not independent of Ethnicity 
+ p-value = 0.00001
+Action_Taken and Gender
+At the .05 significance level proved that  Action_taken was not independent of Gender
+p-value <2e-16
+Action_Taken and Age
+At the .05 significance level proved that  Action_taken was not independent of Age
+ p-value = 0.00000000001
 
-
-```{r}
-cor_loans<-cor(hmda_downnum, use="complete.obs")
-xkabledply(cor_loans)
-loadPkg("corrplot")
-corrplot(cor_loans)
-
-```
-
-
-
-
-Conducting Chi-squared Test on the downsampled dataset (hmda_down)
-
-P-Value for contable1 is lower than .05 therefore we reject the null hypothesis. action_taken and derived_race are not independent of each other
-
-```{r}
+```{r, results='show'}
 
 contable1= table(hmda_down$derived_race, hmda_down$action_taken)
-xkabledply(contable1, title="Contingency table for Loan Approval and Race")
+xkabledply(contable1, title="Balanced Data: Contingency table for Loan Approval and Race")
 chitest1 = chisq.test(contable1)
 chitest1
 
 ```
 
-
-
-```{r}
+```{r, results='show'}
 contable2= table(hmda_down$derived_ethnicity, hmda_down$action_taken)
-xkabledply(contable2, title="Contingency table for Loan Approval and Ethnicity")
+xkabledply(contable2, title="Balanced Data: Contingency table for Loan Approval and Ethnicity")
 chitest2 = chisq.test(contable2)
 chitest2
 ```
 
-
-
-```{r}
+```{r, results='show'}
 contable3= table(hmda_down$derived_sex, hmda_down$action_taken)
-xkabledply(contable3, title="Contingency table for Loan Approval and Gender")
+xkabledply(contable3, title="Balanced Data: Contingency table for Loan Approval and Gender")
 chitest3 = chisq.test(contable3)
 chitest3
 ```
 
-```{r}
+```{r, results='show'}
 contable4= table(hmda_down$applicant_age, hmda_down$action_taken)
-xkabledply(contable4, title="Contingency table for Loan Approval and Age")
+xkabledply(contable4, title="Balanced Data: Contingency table for Loan Approval and Age")
 chitest4 = chisq.test(contable4)
 chitest4
 
 ```
 
+### Building the logit model
 
+As a first step to building the logit model, we recode it to 1 as denial and 0 as approval because we want to calculate the probability of denial to answer the smart question
 
-The residuals decrease with each successive linear model. This suggests that action_taken_fit4 is a better regression model for explaining this data.
-
-######KS############try with recoding the ##############
-### Changing action_taken to factor for logit/recode 1 as denial and 0 as approval because we want to calculate the probability of denial
-
-
-
-```{r}
-hmda_down$action_taken<-recode(hmda_down$action_taken, "3"="1", "1"="0")
-hmda_down$action_taken<-factor(hmda_down$action_taken)
+```{r, results='hide'}
+hmda_down$action_taken<-dplyr::recode(hmda_down$action_taken, "3"="1", "1"="0")
 unique(hmda_down$action_taken)
+hmda_down$action_taken<-factor(hmda_down$action_taken)
+str(hmda_down)
+
+myvars <- names(hmda_down) %in% c("approval") # dropping approval since we don't need this variable anymore
+newdata <- hmda_down[!myvars]
+hmda_down<-newdata
 str(hmda_down)
 ```
 
 ### Logit models for action_taken (version with recoded approval/denial)
 
-```{r}
-###using all the variables of interest first
-approval_logit <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount+applicant_age+ income+interest_rate+property_value, data = hmda_down, family = "binomial")
-summary(approval_logit)
-xkablevif(approval_logit)
-hmda_down$action_taken
-```
-VIF is quite high; not a great model
+We run a model with all of the variables we've included in the analysis.
 
-```{r McFadden_direct}
-approvalNullLogit <- glm(action_taken ~ 1, data = hmda_down, family = "binomial")
-mcFadden = 1 - logLik(approval_logit)/logLik(approvalNullLogit)
+```{r, results='show'}
+###using all the variables of interest first
+denial_logit <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount+applicant_age+ income+interest_rate+property_value, data = hmda_down, family = "binomial")
+summary(denial_logit)
+
+```
+
+The model shows a lot of significant coefficients. Significance and signs of some of the coefficients are expected, such as an inverse relationship between income and denial rates: the higher the income, the lower the probability (log of odds) of denial for a loan. The higher the interest rate, the higher the chances of loan denials. 
+
+However, upon inspection, multicollinearity is quite high and might be related to the inherent interrelatedness of the personal attribute variables. 
+
+```{r, results='show'}
+xkablevif(denial_logit) #check for multicollinearity
+```
+
+We proceed to other tests for the model.
+
+```{r, results='show'}
+denialNullLogit <- glm(action_taken ~ 1, data = hmda_down, family = "binomial")
+mcFadden = 1 - logLik(denial_logit)/logLik(denialNullLogit)
 mcFadden
 ```
 
-Only 27.1 percent of variability is explained by all of the variables we've selected. 
+The McFadden score is extremely low. Our model explains only about 15.5 percent of "variability" in the outcome variable--the probability of denial.
 
-#### Hosmer and Lemeshow test  
-
-The Hosmer and Lemeshow Goodness of Fit test can be used to evaluate logistic regression fit. 
-
-```{r HosmerLemeshow}
+```{r, results='show'}
 loadPkg("ResourceSelection") # function hoslem.test( ) for logit model evaluation
-approveLogitHoslem = hoslem.test(hmda_down$action_taken, fitted(approval_logit)) # Hosmer and Lemeshow test, a chi-squared tests
+approveLogitHoslem = hoslem.test(hmda_down$action_taken, fitted(denial_logit)) # Hosmer and Lemeshow test, a chi-squared tests
 unloadPkg("ResourceSelection") 
 approveLogitHoslem
 ```
 
-The result is shown here:  
+Per Hosmer and Leshow, our model is quite poor; p-value is extremely low.
+
 ```{r HosmerLemeshowRes, results='markup', collapse=F}
 approveLogitHoslem
 
 ```
 
-```{r roc_auc}
-loadPkg("pROC") # receiver operating characteristic curve, gives the diagnostic ability of a binary classifier system as its discrimination threshold is varied. The curve is on sensitivity/recall/true-positive-rate vs false_alarm/false-positive-rate/fall-out.
-prob=predict(approval_logit, type = "response" )
+Finally, we look at the area under the curve, which is 0.775 in our case. We confirm that the model is a poor fit.
+
+```{r, results='show'}
+loadPkg("pROC") 
+prob=predict(denial_logit, type = "response" )
 hmda_down$prob=prob
 h <- roc(action_taken~prob, data=hmda_down)
 auc(h) # area-under-curve prefer 0.8 or higher.
@@ -644,9 +413,67 @@ plot(h)
 
 ```
 
+We then try to look for a new model using feature selection for logistic regressions.
 
+### Feature Selection for Logit
 
-```{r Splitting Model for Train and Test}
+```{r}
+library(bestglm)
+str(hmda_down)
+fs_hmda_down<-hmda_down
+fs_hmda_down$y = hmda_down[,4] 
+str(fs_hmda_down)
+fs_hmda_down<-fs_hmda_down[c(1:3, 5:9, 11)] #subset for feature selection model that does not include action_taken
+
+str(fs_hmda_down)
+
+res.bestglm <- bestglm(Xy = fs_hmda_down, family = binomial,
+            IC = "AIC",                 # Information criteria for
+            method = "exhaustive")
+
+summary(res.bestglm)
+
+res.bestglm$BestModels
+summary(res.bestglm$BestModels)
+#https://rstudio-pubs-static.s3.amazonaws.com/2897_9220b21cfc0c43a396ff9abf122bb351.html
+```
+
+Our test indicates that the first model we ran is the best model. The lowest AIC score is 12871. We test the "next best" model, ust in case-the model that excludes property value.
+
+Feature selection shows that the lowest AIC would use all variables, but not certain this is true; trying the second best without the derived sex
+
+```{r, include=TRUE}
+denial_logit1 <- glm(action_taken ~ derived_race + derived_ethnicity + loan_amount+applicant_age+ income+interest_rate+property_value, data = hmda_down, family = "binomial")
+summary(denial_logit1)
+
+unique(hmda_down$action_taken)
+```
+
+We proceed to testing the fit of the second model.
+
+We find that McFadden is not improved, and the area under the curve is now lower.
+
+```{r McFadden_direct 2}
+denialNullLogit <- glm(action_taken ~ 1, data = hmda_down, family = "binomial")
+mcFadden = 1 - logLik(denial_logit1)/logLik(denialNullLogit)
+mcFadden
+```
+
+```{r roc_auc 2}
+loadPkg("pROC") 
+prob=predict(denial_logit1, type = "response" )
+hmda_down$prob=prob
+h <- roc(action_taken~prob, data=hmda_down)
+auc(h) # area-under-curve prefer 0.8 or higher.
+plot(h)
+# unloadPkg("pROC")
+
+```
+### Splitting Model for Train and Test
+
+Sampling down: drawing a random sample also making training dataset from a random sample of 80% of the data and testing dataset from 20% of the data. Below we run our training dataset through our previous model and the results are similar, the residual deviance is lower than the null deviance at the same difference as with the full dataset indicating that the model is comparable, it carries all the same levels of variables and variables that were statistically significant in the previous model. 
+
+```{r, results='show'}
 set.seed(123)
 index <- sample(nrow(hmda_down),nrow(hmda_down)*0.80)
 training = hmda_down[index,]
@@ -660,66 +487,136 @@ summary(hmda_glm0)
 
 
 ```
-```{r verifying training and testing data}
+
+### Verifying training and testing data
+
+Veiwing training and testing dataset to ensure that it represents correct portions of the original dataset.
+
+```{r  results='show'}
 
 summary(training) 
 summary(testing) 
 
-
 ```
 
+### Feature Selection
 
-
-
-
-
-#Note that feature selection gives us this model below, which has the lowest deviance and lowest AIC score at 519.4.
-
-glm(formula = action_taken ~ derived_sex + loan_amount + income + 
-    property_value, family = "binomial", data = training)
-    
+This is a feature selection done in a different way to confirm the previous feature selection to ensure we are using the correct model.  The model results are similar and the full model it gives us the same model to use as the best fit model for our variables.
 
 ```{r variable/feature selection using backward selection AIC}
 hmda_glm_back <- step(hmda_glm0) #backward selections
 summary(hmda_glm_back)
 hmda_glm_back$deviance
 AIC(hmda_glm_back)
+```
+
+### Predictive Analysis & Confusion Matrix
+
+Here we run our testing dataset through our model and look into the results. The results are simlair and the residual deviance is the same. Next we created an expected values dataframe and a predicted probability dataset to make a confusion matrix to see how well our model is doing. 
+
+The Accuracy Score is 72% and recall rate is 73%, this model is doing a decent job of predicting our testing dataset. It is important to note that we are focus on drivers for denials in our research but is shows that our model predicts approvals at a slightly higher rate than denials. 
+
+```{r results='show'}
+library(caret)
+glm_fit = glm(action_taken ~ derived_race + derived_ethnicity + loan_amount+applicant_age+ income+interest_rate+property_value, data = training, family = "binomial")
+glm_fit
+
+
+glm_probs = data.frame(probs = predict(glm_fit, 
+                                       newdata = testing, 
+                                       type="response"))
+
+glm_pred = glm_probs %>%
+  mutate(pred = ifelse(probs>.5, "1", "0"))
+
+
+
+pc<-factor(glm_pred$pred)
+e<- (testing$action_taken)
+
+
+table(pc)
+table(e)
+
+
+confusionMatrix(data=pc, reference = e)
+
+
+x<-data.frame("target"=c(1,0,1,0), "prediction"=c(1,1,0,0), "n"=c(817,306,288,786))
+
+library(ggplot2)
+
+ggplot(x, aes(x = target, y = prediction, fill = n)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = n), color = "Yellow", size = 4) +
+  coord_fixed()+
+  scale_fill_gradient2(low = "#075AFF",
+                       mid = "#FFFFCC",
+                       high = "Purple") +
+     scale_y_continuous(trans = "reverse", breaks = unique(x$prediction))
+
+ 
+
 
 
 ```
 
+### Decision trees 
 
-```{r Predictive Analysis Using Testing dataset on training model}
+Split data(training:testing = 80%:20%)
 
-hmda_glm<-glm(formula = action_taken ~ derived_sex + loan_amount + income + 
-    property_value, family = "binomial", data = training)
+```{r results='show'}
+n = nrow(loans)
+split = sample(c(TRUE, FALSE), n, replace=TRUE, prob=c(0.8, 0.2))
 
-summary(hmda_glm)
+tree.training = loans[split, ]
+tree.testing = loans[!split, ]
 ```
-# decision trees 
-```{r}
+
+### Building model.
+
+```{r results='show'}
 library(rpart)
 library(rpart.plot)
-
-fit <- rpart(action_taken~derived_sex + loan_amount + income + 
-    property_value, data = training, method = 'class')
+fit <- rpart(action_taken~., data = tree.training, method = 'class',control = ("maxdepth = 4"))
 rpart.plot(fit, extra = 106)
 
 ```
-At the top(node1), it is the overall probability of loan approval. It shows the proportion of applicant that get approval for their loan. 50 percent of applicant get approval.
-Node1 asks whether the loan amount is equal or greater than 130e+3. If yes, then we go down to the root’s left income node (depth 2). 31 percent of applicants need loan amount over 130e+3 with loan denied probability of 64 percent.
-In the node2, asking if the applicant's income is above 84. If no, 28 percent of applicant's income is below 84 and the chance of denial is 54 percent.
-Asking if the applicant's loan amount is above less than 370e+3, 21 percent of applicants need loan amount over 370e+3 and the chance of denial for them is 50 percent. with loan amount below 370e+3, their chance of get denial is 67%.
-13 percent of applicants's income below 60, and their loan denial chance is 56%.
 
-# confustion martrix 
-```{r}
-table(hmda_down$action_taken, predict > 0.5)
+At the top (node1), it is the overall probability of loan approval. It shows the proportion of applicant that get approved for their loan. 50 percent of applicant get approved.
+
+Node1 asks whether the interest rate is less than 4.5, If yes, 37 percent of applicants have no chance to have their loan approved; if no, 63 percent of applicants have 79 percent of chance to have their loan denied. 
+
+In the node2, asking if the interest rate is equal or greater than 4.5, If yes, 50 percent of applicant have 100 percent of chance to have their loan denied; if no, 13 percent of applicants will not have their loan approved. 
+
+### Making a prediction
+
+```{r results='show'}
+predict_unseen <-predict(fit, tree.testing, type = 'class')
+summary(predict_unseen)
+```
+
+### Create a table to count how many applicants are classified as approval and denied
+
+```{r results='show'}
+table_mat <- table(tree.testing$action_taken, predict_unseen )
+table_mat
 
 ```
-# Evaluate overdispersion
-```{r}
-deviance(hmda_glm)/df.residual(hmda_glm) 
-```
-If the ratio considerably larger than 1, then it indicates that we have an overdispersion issue. Calculating this ratio using our data example, we find that the ratio is larger than 1. It means we have overdispersion problem on our model.
 
+### Measure performance:confustion martrix
+
+```{r results='show'}
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)#0.999
+```
+
+### Conclusions
+
+We have a score of 99 percent for the test set.
+
+Via feature selection, we know ethnicity, race, sex, loan amount, interest rate, property value, income, and age are important.
+
+An earlier decision tree analysis highlighted income and loan amount.
+Income and loan amount are important variables when determining mortgage approval and rejection, which feels true. In the real world, though, income is directly impacted by the race, ethnicity and sex of the individual in question. Bottom line: it’s difficult to separate these things when they are so interrelated.
+
+A second decision tree, highlighted in this presentation, surfaced interest rate as important.
