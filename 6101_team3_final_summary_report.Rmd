@@ -1,0 +1,498 @@
+---
+title: "Technical Analysis: DATS 6101 Final Project"
+author: "Brandon Chin, Paul Kelly, Ksenia Shadrina, Luke Wu"
+date: "4/27/22"
+# date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+library(ezids)
+library(tidyverse)
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+#options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+
+# I. Introduction
+
+There is considerable evidence indicating historical discriminatory lending practices throughout the United States. (Steil et al.: 2018) In our research, we explore lending practices in California in 2019. We focus on California in part due to a very large number of observations on California in the Federal Financial Institutions Examination Council’s (FFIEC) Home Mortgage Disclosure Act (HMDA) dataset. We also examine the housing market in California because the state presents an interesting case study due to its large and increasingly diverse population (Public Policy Institute: 2022) and dynamic economy. By analyzing the data from 2019, we get the most recent glimpse at lending practices before the onset of the economic crisis induced by the COVID-19 pandemic. While the dataset is very detailed and presents an opportunity for rigorous research, we must narrow the scope of the analysis given the time constraints. 
+
+In the course of the midterm project research, we discovered that answering our original SMART question would require, at the very least, building a logistic regression model. In addition, we discovered that we had an unbalanced dataset which behooved us to increase our sample size significantly: from 5,441 to 50,000 observations on California.
+
+Based on our initial findings, we proceeded to testing the relationship between rate of loan denials and income of applicant, loan amount, interest rate, property value, gender of applicant, race of applicant, age of applicant, ethnicity of applicant. These variables were chosen in the first part of the research based on economic theory, completeness of the data, and brief literature review described in the next section. Thus, our SMART question remained largely unchanged:
+
+“Which factors drove denials for mortgages in California in 2019?”
+
+Similarly to the midterm project, we conducted various data cleaning and exploration exercises. After constructing a number of logistic regression models without finding a good fit, we used the classification tree technique. 
+
+# II. Brief Literature Review
+
+A number of recent studies have examined factors associated with either mortgage denial rates or cost of loans. The literature reviewed within the scope of our research suggested evidence of disparities in mortgage lending practices across race, ethnicity, age, and gender.
+
+Bayer, Ferreira, and Ross (2014) examine lending practices in seven large metropolitan areas, including Los-Angeles CA CMSA and San Francisco, CA between 2004 and 2008 using HMDA data - the same dataset that we employ in our study. The authors find that the incidence of high cost loans is higher for African American and Hispanic borrowers even after controlling for key mortgage risk factors such as borrower credit score. 
+
+In examining differences in the share of applications denied by lenders, similar to our focus, Park (2022) addresses the possible omitted variable bias driven by previously missing data in earlier studies by estimating expected risk with a detailed set of underwriting characteristics available in newly available HMDA and Federal Housing Administration (FHA) data between 2010 and 2019. The author finds evidence of disparities in denials rates across race, ethnicity, and gender that “cannot be fully explained by differences in default risk.”
+
+A recent study by the Urban Institute (2021) examined the relationship between mortgage denial rates and age, also using the HMDA data. The authors find that older applicants are indeed more likely to be denied than younger applicants. The authors also find that household financial characteristics are likely contributing to denial rates higher for older homeowners. Using data from the Federal reserve, the authors note that the share of individuals ages older and 65 that have debt is substantially higher than 20 years ago. 
+
+# III. Data Cleaning and EDA
+
+All of the data cleaning procedures remained the same as in the midterm; therefore, our starting point here is 24,018 observations. Specifically, we filtered on the action_taken of denial and approval, removed all the business properties, removed outliers, and removed the missing values. The resulting dataset  "loans.csv" is our starting point.
+
+```{r, results='hide'}
+loans <- data.frame(read.csv("loans.csv"))
+str(loans) #24018 obs. of  9 variables # dropped applicant sex because it's essentially the same as derived sex
+```
+
+
+```{r, results='hide'}
+loans$derived_ethnicity = factor(loans$derived_ethnicity)
+loans$derived_race = factor(loans$derived_race)
+loans$derived_sex = factor(loans$derived_sex)
+loans$loan_amount = as.numeric(loans$loan_amount)
+loans$interest_rate = as.numeric(loans$interest_rate)
+loans$property_value = as.numeric(loans$property_value)
+loans$income = as.numeric(loans$income)
+loans$applicant_age = factor(loans$applicant_age)
+str(loans)
+```
+
+We ran the summary statistics on the four numerical variables, noting different scales. (Table 1.) We also note that the data are not normally distributed. 
+
+```{r, results='show'}
+options(scipen=9, digits = 3) 
+Numerical_var <- subset(loans,select=c(loan_amount, income, property_value, interest_rate))
+library(kableExtra)
+summary_t<-kbl(summary(Numerical_var))%>%
+  kable_styling()
+summary_t
+```
+
+We then do a visual inspection of the new dataset, starting with categorical values.
+
+```{r, results='show'}
+library(ggthemes)
+library(forcats)
+library(ggplot2)
+mfrow=c(2, 3)
+ggplot(loans, aes(x  = fct_infreq(derived_sex), fill=derived_sex)) +
+    geom_bar()+
+  labs(title="Graph 1. Applicant sex distribution", x="Applicant Sex", y="Count")+theme_clean()
+
+ggplot(loans, aes(x = fct_infreq(applicant_age),fill=applicant_age)) +
+    geom_bar()+
+  labs(title="Graph 2. Applicant age distribution", x="Applicant Age", y="Count")+theme_clean()
+
+ggplot(loans, aes(x = fct_infreq(derived_ethnicity), fill=derived_ethnicity))+
+geom_bar()+theme_clean()+
+  labs(title="Graph 3. Applicant ethnicity distribution", x="Applicant Ethnicity", y="Count")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+loans$action_taken1<-dplyr::recode(loans$action_taken, "3"="Denial", "1"="Approval") #recode for the purposes of visuals
+
+ggplot(loans, aes(x = fct_infreq(as.factor(action_taken1)), fill=action_taken1)) +
+    geom_bar()+
+  labs(title="Graph 4. Action taken distribution", x="Action Taken", y="Count")+theme_clean()
+
+ggplot(loans, aes(x = fct_infreq(derived_race), fill=derived_race)) +
+   geom_bar(stat = 'count') + theme_clean()+
+  labs(title="Graph 5. Derived Race", x="Race of the Applicant", y= "Count")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+```
+
+There are three noteworthy features in the categorical graphs which communicate the same story about the distribution of variables as in our midterm project.
+
+First, we note that ethnicity and race variables are overly represented by "Not Hispanic or Latino" and "white" are overrepresented. Secondly, there is an obvious overlap between these two variables with the skew in these two respective categories, and in future research, these two variables should either be combined or used in separate models. Third, the action_taken graph is heavily skewed on approvals, and thus, to answer our SMART question, we will have to balance the dataset.
+
+Next, we proceed to examining the numerical variable histograms.
+
+```{r, include=TRUE}
+mfrow=c(2, 3)
+ggplot(loans,aes(x=loan_amount))+
+  geom_histogram(color="black", fill="steelblue")+
+  labs(title=" Graph 6. Histogram of Loan Amount", x="Loan Amount in dollars", y="Frequency")+theme_clean()
+
+ggplot(loans,aes(x=interest_rate))+
+  geom_histogram(color="black", fill="pink")+
+  labs(title="Graph 8. Histogram of Interest Rate", x="Interest Rates", y="Frequency")+theme_clean()
+
+ggplot(loans,aes(x=income))+
+  geom_histogram(color="black", fill="green")+
+  labs(title="Graph 9. Histogram of Income", x="Income in dollars", y="Frequency")+theme_clean()
+
+ggplot(loans,aes(x=property_value))+
+  geom_histogram(color="black", fill="lightblue")+
+  labs(title="Graph 10. Histogram of Property Values", x="Property Values in dollars", y="Frequency")+theme_clean()
+```
+
+Only income and property values appear to approach normal distribution. We proceed without taking any additional outliers out because balancing of the data will require us to remove additonal data.
+
+We decided to run to chi-square tests on the unbalanced data first, and contrary to the results we got in the midterm project, all tests ran well and rejected the null hypothesis of independence between categorical variables describing attributes of applicants and the approval or denial status for a loan.
+
+```{r, results='show'}
+library(kableExtra)
+contable1= table(loans$derived_race, loans$action_taken1)
+xkabledply(contable1, title="Contingency table for Loan Approval and Race")
+chitest1 = chisq.test(contable1)
+chitest1
+```
+
+```{r, results='show'}
+contable2= table(loans$derived_ethnicity, loans$action_taken1)
+xkabledply(contable2, title="Contingency table for Loan Approval and Ethnicity")
+chitest2 = chisq.test(contable2)
+chitest2
+```
+
+```{r, results='show'}
+contable3= table(loans$derived_sex, loans$action_taken1)
+xkabledply(contable3, title="Contingency table for Loan Approval and Gender")
+chitest3 = chisq.test(contable3)
+chitest3
+```
+
+```{r, results='show'}
+contable4= table(loans$applicant_age, loans$action_taken1)
+xkabledply(contable4, title="Contingency table for Loan Approval and Age")
+chitest4 = chisq.test(contable4)
+chitest4
+```
+
+Despite the chi-square tests running well and confirming that denial or approvals are not independent of personal attributes of the applicants: race, ethnicity, age, and sex, we know that our dataset is unbalanced between the number of approvals and denials based on EDA. Before constructing the logistical model, we first balance the data.
+
+# IV. Balancing dataset
+
+```{r, results='hide'}
+hmda <- data.frame(loans)
+hmda$approval<- ifelse(hmda$action_taken=="1", "Approved","Denied")
+hmda$approval<- factor(hmda$approval)
+str(hmda)
+table(hmda$approval)
+```
+
+The number of approvals is over three times higher than denials as shown in the table below.
+
+```{r, results='show'}
+with(hmda,
+     {
+       print(table(derived_race))
+       print(table(approval))
+     }
+)
+```
+
+To balance the dataset, the downsampling technique is used. Balancing the dataset leaves us with 10,952 observations.
+
+```{r, results='show'}
+Approved<- which(hmda$action_taken=="1")
+Denied<- which(hmda$action_taken=="3")
+
+length(Approved)
+length(Denied)
+
+#The technique
+approved_downsample<-sample(Approved,length(Denied))
+hmda_down<- hmda[c(approved_downsample, Denied),]
+str(hmda_down)
+#10952 obs. of  11 variables
+```
+
+We then, rerun the Chi-Square tests on the new balanced dataset. Once again, the p-values for all of the tests are lower than 0.05; therefore we reject the null hypotheses in all four cases. Indeed, our results so far show that personal attribute variables we have selected are related to the outcome of approval or denial for a loan. However, whether these factors drive approvals or denials can be answered by constructing the logistic regression as a first step.
+
+```{r, results='show'}
+hmda_down$action_taken1<-dplyr::recode(hmda_down$action_taken, "1"="Denial", "0"="Approval") #recode for the purposes of visuals; only used for chi-square tests and ggplot
+contable1= table(hmda_down$derived_race, hmda_down$action_taken1)
+xkabledply(contable1, title="Balanced Data: Contingency table for Loan Approval and Race")
+chitest1 = chisq.test(contable1)
+chitest1
+```
+
+```{r, results='show'}
+contable2= table(hmda_down$derived_ethnicity, hmda_down$action_taken1)
+xkabledply(contable2, title="Balanced Data: Contingency table for Loan Approval and Ethnicity")
+chitest2 = chisq.test(contable2)
+chitest2
+```
+
+```{r, results='show'}
+contable3= table(hmda_down$derived_sex, hmda_down$action_taken1)
+xkabledply(contable3, title="Balanced Data: Contingency table for Loan Approval and Gender")
+chitest3 = chisq.test(contable3)
+chitest3
+```
+
+```{r, results='show'}
+contable4= table(hmda_down$applicant_age, hmda_down$action_taken1)
+xkabledply(contable4, title="Balanced Data: Contingency table for Loan Approval and Age")
+chitest4 = chisq.test(contable4)
+chitest4
+```
+
+As a first step to building the logit model, we recode it to 1 as denial and 0 as approval because of how our SMART question is formulated.
+
+```{r, results='hide'}
+hmda_down$action_taken<-dplyr::recode(hmda_down$action_taken, "3"="1", "1"="0")
+unique(hmda_down$action_taken)
+hmda_down$action_taken<-factor(hmda_down$action_taken)
+
+myvars <- names(hmda_down) %in% c("approval", "action_taken1") # dropping approval and action_1 since we don't need these variables anymore
+newdata <- hmda_down[!myvars]
+hmda_down<-newdata
+str(hmda_down)
+```
+
+# V. Building Logistic Regression Model and Classification Trees
+
+We run a model with all of the variables we've included in the analysis.
+
+```{r, results='show'}
+denial_logit <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount+applicant_age+ income+interest_rate+property_value, data = hmda_down, family = "binomial")
+```
+
+```{r, results='show'}
+library(jtools)
+summ(denial_logit)
+```
+
+Nearly all of the coefficients are significant, and the signs on the coefficients are as expected. For instance, an inverse relationship between income and denial log of odds ratio: the higher the income, the lower log of odds of denial for a loan. The higher the interest rate, the higher the chances of loan denials. 
+
+However, as shown in the table, the McFadden value is rather low: the outcome of loan denial can be explained by the model only about 15.5% of the time. The additional tests, Hosmer and Lemeshow and Area under the Curve, confirm that the full model is a poor fit
+
+```{r, results='hide'}
+loadPkg("ResourceSelection") # function hoslem.test( ) for logit model evaluation
+approveLogitHoslem = hoslem.test(hmda_down$action_taken, fitted(denial_logit)) # Hosmer and Lemeshow test, a chi-squared tests
+unloadPkg("ResourceSelection") 
+approveLogitHoslem
+```
+
+Per Hosmer and Leshow, our model is quite poor; p-value is extremely low.
+
+```{r HosmerLemeshowRes, results='markup', collapse=F}
+approveLogitHoslem
+```
+
+We also note the unusual shape of the resulting AUC curve that appears smoother than other examples we see demonstrated online.
+
+```{r, results='show'}
+loadPkg("pROC") 
+prob=predict(denial_logit, type = "response" )
+hmda_down$prob=prob
+h <- roc(action_taken~prob, data=hmda_down)
+auc(h)
+#create ROC plot
+ggroc(h, colour = 'steelblue', size = 2)+ggtitle("AUC = 0.775/Full Model")+theme_clean()
+```
+
+We then try to look for a new model using feature selection for logistic regressions.
+
+```{r, results='show'}
+library(bestglm)
+#str(hmda_down)
+fs_hmda_down<-hmda_down
+fs_hmda_down$y = hmda_down[,4] #clean the data
+
+fs_hmda_down<-fs_hmda_down[c(1:3, 5:9, 11)] #subset for feature selection model that does not include action_taken
+str(fs_hmda_down)
+
+res.bestglm <- bestglm(Xy = fs_hmda_down, family = binomial,
+                      
+            IC = "AIC",                 # Information criteria for
+            method = "exhaustive")
+
+#summary(res.bestglm)
+
+res.bestglm$BestModels
+summary(res.bestglm$BestModels)
+#https://rstudio-pubs-static.s3.amazonaws.com/2897_9220b21cfc0c43a396ff9abf122bb351.html
+```
+
+Our test indicates that the first model we ran is the best model. The lowest AIC score is 12994. Revisitng the issue of scale differences among numerical variables, we standardize all the numerical variables and re-test the model.
+
+```{r, results='hide'}
+hmda_down$income_sc<-scale(hmda_down$income)
+hmda_down$interest_sc<-scale(hmda_down$interest_rate)
+hmda_down$property_sc<-scale(hmda_down$property_value)
+hmda_down$loan_amount_sc<-scale(hmda_down$loan_amount)
+str(hmda_down)
+```
+
+```{r, results='show'}
+###using all the variables of interest with scaled data
+denial_logit_scaled <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount_sc+applicant_age+ income_sc+interest_sc+property_sc, data = hmda_down, family = binomial(link="logit"))
+summ(denial_logit_scaled)
+```
+
+Standardizing numerical variables has not improved the fit of the model as indicated by the McFadden value. AUC remains unchanged.
+
+```{r, results='show'}
+prob1=predict(denial_logit_scaled, type = "response" )
+hmda_down$prob1=prob1
+h <- roc(action_taken~prob1, data=hmda_down)
+auc(h)
+#create ROC plot
+ggroc(h, colour = 'steelblue', size = 2)+ggtitle("AUC = 0.775/Standardized Model")+theme_clean()
+```
+
+We proceed to splitting model into train and test to try using the logistic regression to answer our SMART question.
+
+Sampling down: drawing a random sample also making training dataset from a random sample of 80% of the data and testing dataset from 20% of the data. Below we run our training dataset through our previous model and the results are similar, the residual deviance is lower than the null deviance at the same difference as with the full dataset indicating that the model is comparable, it carries all the same levels of variables and variables that were statistically significant in the previous model.
+
+```{r, results='show'}
+set.seed(123)
+index <- sample(nrow(hmda_down),nrow(hmda_down)*0.80)
+training = hmda_down[index,]
+testing = hmda_down[-index,]
+
+
+hmda_glm0 <- glm(action_taken ~ derived_race + derived_ethnicity + derived_sex + loan_amount+applicant_age+ income+interest_rate+property_value, data = training, family = "binomial")
+summ(hmda_glm0)
+```
+
+## Verifying training and testing data
+
+Veiwing training and testing dataset to ensure that it represents correct portions of the original dataset.
+
+```{r  results='show'}
+summary(training) 
+summary(testing) 
+```
+
+This is a feature selection done in a different way to confirm the previous feature selection to ensure we are using the correct model.  The model results are similar and the full model it gives us the same model to use as the best fit model for our variables.
+
+```{r variable/feature selection using backward selection AIC}
+hmda_glm_back <- step(hmda_glm0) #backward selections
+summary(hmda_glm_back)
+hmda_glm_back$deviance
+AIC(hmda_glm_back)
+```
+
+## Predictive Analysis and Confusion Matrix
+
+Here we run our testing dataset through our model and look into the results. The results are similar, and the residual deviance is the same. Next we created an expected values dataframe and a predicted probability dataset to make a confusion matrix to see how well our model is doing. 
+
+The Accuracy Score is 72% and recall rate is 73%, meaning this model is doing a decent job of predicting our testing dataset. It is important to note that we are focus on drivers for denials in our research but is shows that our model predicts approvals at a slightly higher rate than denials. 
+
+```{r results='show'}
+library(caret)
+glm_fit = glm(action_taken ~ derived_race + derived_ethnicity + loan_amount+applicant_age+ income+interest_rate+property_value, data = training, family = "binomial")
+summ(glm_fit)
+```
+
+```{r, results='show'}
+glm_probs = data.frame(probs = predict(glm_fit, 
+                                       newdata = testing, 
+                                       type="response"))
+
+glm_pred = glm_probs %>%
+  mutate(pred = ifelse(probs>.5, "1", "0"))
+
+
+
+pc<-factor(glm_pred$pred)
+e<- (testing$action_taken)
+
+
+table(pc)
+table(e)
+
+
+confusionMatrix(data=pc, reference = e)
+
+
+x<-data.frame("target"=c(1,0,1,0), "prediction"=c(1,1,0,0), "n"=c(817,306,288,786))
+
+library(ggplot2)
+
+ggplot(x, aes(x = target, y = prediction, fill = n)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = n), color = "Yellow", size = 4) +
+  coord_fixed()+
+  scale_fill_gradient2(low = "#075AFF",
+                       mid = "#FFFFCC",
+                       high = "Purple") +
+     scale_y_continuous(trans = "reverse", breaks = unique(x$prediction))
+```
+
+# VI. Classification Trees
+
+## Split data (training:testing = 80%:20%)
+
+```{r results='show'}
+n = nrow(loans)
+split = sample(c(TRUE, FALSE), n, replace=TRUE, prob=c(0.8, 0.2))
+
+tree.training = loans[split, ]
+tree.testing = loans[!split, ]
+```
+
+```{r results='show'}
+library(rpart)
+library(rpart.plot)
+fit <- rpart(action_taken~., data = tree.training, method = 'class',control = ("maxdepth = 4"))
+rpart.plot(fit, extra = 106)
+```
+
+At the top (Node1), is the overall probability of loan approval. It shows the proportion of applicants that get approved for their loan. 50 percent of applicants get approved. This is expected given that our balanced dataset technique set the split to 50/50.
+
+Node1 asks whether the interest rate is less than 4.5, If yes, 37 percent of applicants have no chance to have their loan approved; if no, 63 percent of applicants have 79 percent chance of having their loan denied. 
+
+In Node2, asking if the interest rate is equal or greater than 4.5, If yes, 50 percent of applicant have a 100 percent chance of having their loan denied; if no, 13 percent of applicants will be denied. 
+
+## Making a prediction
+
+```{r results='show'}
+predict_unseen <-predict(fit, tree.testing, type = 'class')
+summary(predict_unseen)
+```
+
+## Create a table to count how many applicants are classified as approval and denied
+
+```{r results='show'}
+table_mat <- table(tree.testing$action_taken, predict_unseen )
+table_mat
+```
+
+## Measure performance:confustion martrix
+
+```{r results='show'}
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)#0.999
+```
+
+We have a score of 99 percent for the test set. There is a high likelihood of overfitting. 
+
+# VI. Conclusion and Next Steps
+
+# References
+
+Bayer, P.,  Ferreira, F., and Ross, S..( 2014). Race, Ethnicity and High-Cost Mortgage Lending.  NBER Working Paper No. 20762
+
+Namin, S., Zhou,Y., Xu, W.,  McGinley, E., Jankowski,C., Laud, P., & Beyer, K. (2022)Persistence of mortgage lending bias in the United States: 80 years after the Home Owners’ Loan Corporation security maps, Journal of Race, Ethnicity and the City, DOI: 10.1080/26884674.2021.2019568
+
+Park, K. A., (2022) A Comparison of Mortgage Denial and Default Rates by Race, Ethnicity, and Gender. Available at SSRN: https://ssrn.com/abstract=4030908 or http://dx.doi.org/10.2139/ssrn.4030908
+
+California's Population. Website title:Public Policy Institute of California
+URL:https://www.ppic.org/publication/californias-population/
+Date accessed:March 21, 2022
+
+Steil, J. P., Albright, L., Rugh, J. S., & Massey, D. S. (2018). The Social Structure of Mortgage Discrimination. Housing studies, 33(5), 759–776. https://doi.org/10.1080/02673037.2017.1390076
+
+Kaul, K., Zhu, L. (2021). Mortgage Denial Rates and Household Finances among Older Americans. The Urban Institute. Accessible at: https://www.urban.org/sites/default/files/publication/104965/mortgage-denial-rates-and-household-finances-among-older-americans.pdf
+
+# Data
+
+Loan/Application Records (LAR).  2019. Dynamic National Loan-Level Dataset. Home Mortgage Disclosure Act (HMDA). Accessible at: https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level-dataset/2019
